@@ -1,0 +1,64 @@
+import { Scripture } from '../types.ts';
+
+export const POPULAR_SCRIPTURES: Scripture[] = [
+  {
+    id: 'gita-2-47',
+    title: 'Nishkama Karma (Selfless Action)',
+    source: 'Bhagavad Gita 2.47',
+    category: 'Gita',
+    verse: 'कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।\nमा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि॥',
+    transliterationDefault: 'karmaṇy-evādhikāras te mā phaleṣu kadācana ।\nmā karma-phala-hetur bhūr mā te saṅgo ’stv akarmaṇi ॥',
+    translationDefaultEnglish: 'You have a right to perform your prescribed duty, but you are not entitled to the fruits of action. Never consider yourself the cause of the results of your activities, and never be attached to not doing your duty.',
+    translationDefaultHindi: 'तुम्हारा अधिकार केवल कर्म करने पर ही है, उसके फलों पर कभी नहीं। तुम स्वयं को अपने कर्मों के फलों का कारण मत मानो, और न ही अकर्मण्यता (कर्म न करने) में तुम्हारी आसक्ति हो।'
+  },
+  {
+    id: 'gita-4-7',
+    title: 'Incarnation of Divine Grace',
+    source: 'Bhagavad Gita 4.7',
+    category: 'Gita',
+    verse: 'यदा यदा हि धर्मस्य ग्लानिर्भवति भारत।\nअभ्युत्थानमधर्मस्य तदात्मानं सृजाम्यहम्॥',
+    transliterationDefault: 'yadā yadā hi dharmasya glānir bhavati bhārata ।\nabhyutthānam adharmasya tadātmanāṁ sṛjāmy aham ॥',
+    translationDefaultEnglish: 'Whenever and wherever there is a decline in religious practice, O descendant of Bharata, and a predominant rise of irreligion—at that time I descend Myself.',
+    translationDefaultHindi: 'हे भारत (अर्जुन)! जब-जब धर्म की हानि और अधर्म का उत्थान होता है, तब-तब मैं अपने रूप (अवतार) की रचना करता हूँ।'
+  },
+  {
+    id: 'mrityunjaya-mantra',
+    title: 'Maha Mrityunjaya Mantra',
+    source: 'Rigveda 7.59.12',
+    category: 'Vedas',
+    verse: 'त्र्यम्बकं यजामहे सुगन्धिं पुष्टिवर्धनम्।\nउर्वारुकमिव बन्धनान्मृत्योर्मुक्षीय माऽमृतात्॥',
+    transliterationDefault: 'tryambakaṁ yajāmahe sugandhiṁ puṣṭi-vardhanam ।\nurvārukam iva bandhanān mṛtyor mukṣīya mā ’mṛtāt ॥',
+    translationDefaultEnglish: 'We worship the three-eyed Lord (Shiva), who is fragrant and who nourishes all development. May He liberate us from death, for the sake of immortality, just as a ripe cucumber is severed easily from its binding vine.',
+    translationDefaultHindi: 'हम तीन नेत्रों वाले भगवान शिव की पूजा करते हैं, जो सुगंधित हैं और जीवनदायिनी शक्ति का पोषण करते हैं। जैसे पका हुआ खरबूजा बेल से अनायास ही मुक्त हो जाता है, वैसे ही वे हमें मृत्यु के बंधनों से मुक्त करें, पर अमरत्व से नहीं।'
+  },
+  {
+    id: 'gayatri-mantra',
+    title: 'Savitri Gayatri Mantra',
+    source: 'Rigveda 3.62.10',
+    category: 'Vedas',
+    verse: 'ॐ भूर् भुवः स्वः।\nतत् सवितुर्वरेण्यं भर्गो देवस्य धीमहि।\nधियो यो नः प्रचोदयात्॥',
+    transliterationDefault: 'oṁ bhūr bhuvaḥ svaḥ ।\ntat savitur vareṇyaṁ bhargo devasya dhīmahi ।\ndhiyo yo naḥ pracodayāt ॥',
+    translationDefaultEnglish: 'O Divine Mother, may your pure spiritual light illuminate our intellect and direct our understanding on the path of righteousness.',
+    translationDefaultHindi: 'उस प्राणस्वरूप, दुःखनाशक, सुखस्वरूप, श्रेष्ठ, तेजस्वी, पापनाशक, देवस्वरूप परमात्मा का हम ध्यान करें, जो हमारी बुद्धियों को धर्म-सद्मार्ग की ओर प्रेरित करे।'
+  },
+  {
+    id: 'upanishad-shanti',
+    title: 'Peace Invocation (Shanti Mantra)',
+    source: 'Katha Upanishad Invocation',
+    category: 'Upanishads',
+    verse: 'ॐ सह नाववतु। सह नौ भुनक्तु।\nसह वीर्यं करवावहै।\nतेजस्वि नावधीतमस्तु मा विद्विषावहै॥\nॐ शान्तिः शान्तिः शान्तिः॥',
+    transliterationDefault: 'oṁ saha nāvavatu | saha nau bhunaktu |\nsaha vīryaṁ karavāvahai |\ntejasvi nāv adhītam astu mā vidviṣāvahai ||\noṁ śāntiḥ śāntiḥ śāntiḥ ||',
+    translationDefaultEnglish: 'Om. May the Divine protect us both (teacher and student). May He nourish us both. May we work together with great energy. May our study be enlightening and not give rise to hostility. Om, Peace, Peace, Peace.',
+    translationDefaultHindi: 'ॐ। ईश्वर हम दोनों (गुरु और शिष्य) की साथ-साथ रक्षा करे। वह हम दोनों का साथ-साथ पोषण करे। हम दोनों साथ मिलकर महान ऊर्जा के साथ कार्य करें। हमारा अध्ययन तेजोमय हो और हम कभी एक-दूसरे से द्वेष न करें। ॐ, शान्तिः, शान्तिः, शान्तिः।'
+  },
+  {
+    id: 'isha-upanishad-1',
+    title: 'All is Divine',
+    source: 'Isha Upanishad 1',
+    category: 'Upanishads',
+    verse: 'ईशा वास्यमिदं सर्वं यत्किञ्च जगत्यां जगत्।\nतेन त्यक्तेन भुञ्जीथा मा गृधः कस्यस्विद्धनम्॥',
+    transliterationDefault: 'īśā vāsyam idaṁ sarvaṁ yat kiñca jagatyāṁ jagat | \ntena tyaktena bhuñjīthā mā gṛdhaḥ kasya svid dhanam ||',
+    translationDefaultEnglish: 'All this, whatever moves in this moving world, is enveloped by God. Therefore, find your enjoyment in renunciation; do not covet what belongs to anyone else.',
+    translationDefaultHindi: 'इस गतिशील संसार में जो कुछ भी चेतन-अचेतन है, वह सब ईश्वर द्वारा व्याप्त है। इसलिए त्यागभाव से ही इसका उपभोग करो; किसी दूसरे के धन की लालसा मत करो।'
+  }
+];
