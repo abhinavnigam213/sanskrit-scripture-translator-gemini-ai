@@ -6,7 +6,7 @@ interface ApiPlaygroundProps {
 }
 
 export default function ApiPlayground({ currentText }: ApiPlaygroundProps) {
-  const [selectedEndpoint, setSelectedEndpoint] = useState<'/api/translate' | '/api/transliterate' | '/api/analyze' | '/api/scriptures'>('/api/translate');
+  const [selectedEndpoint, setSelectedEndpoint] = useState<'/api/translate' | '/api/transliterate' | '/api/analyze' | '/api/scriptures' | '/api/dictionary'>('/api/translate');
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'docs' | 'tester'>('docs');
   const [selectedLang, setSelectedLang] = useState<'curl' | 'js' | 'python'>('curl');
@@ -34,7 +34,8 @@ export default function ApiPlayground({ currentText }: ApiPlaygroundProps) {
       text: currentText || "त्र्यम्बकं यजामहे सुगन्धिं पुष्टिवर्धनम्।",
       sourceContext: "Rigveda"
     }, null, 2),
-    '/api/scriptures': ''
+    '/api/scriptures': '',
+    '/api/dictionary': ''
   };
 
   // Sync request body when endpoint changes
@@ -50,7 +51,7 @@ export default function ApiPlayground({ currentText }: ApiPlaygroundProps) {
 
   const getCodeSnippet = (lang: 'curl' | 'js' | 'python', endpoint: string, bodyStr: string) => {
     const host = window.location.origin;
-    const isGet = endpoint === '/api/scriptures';
+    const isGet = endpoint === '/api/scriptures' || endpoint === '/api/dictionary';
     let bodyObj = null;
     if (!isGet) {
       try {
@@ -111,7 +112,7 @@ print(data)`;
     setApiError(null);
     setApiResponse('');
     try {
-      const isGet = selectedEndpoint === '/api/scriptures';
+      const isGet = selectedEndpoint === '/api/scriptures' || selectedEndpoint === '/api/dictionary';
       let options: RequestInit = {
         method: isGet ? "GET" : "POST",
         headers: {}
@@ -149,6 +150,10 @@ print(data)`;
   const endpointBriefs = {
     '/api/scriptures': {
       desc: 'Retrieves a list of popular, pre-configured classical Sanskrit scriptures, verses, categories, and translation defaults.',
+      method: 'GET'
+    },
+    '/api/dictionary': {
+      desc: 'Retrieves the complete specialized scripture dictionary entries grouped by sacred categories: Vedas, Upanishads, Bhagavad Gita, Ramayana, and Puranas.',
       method: 'GET'
     },
     '/api/translate': {
@@ -274,9 +279,9 @@ print(data)`;
                 <div className="flex flex-col space-y-2">
                   <div className="flex justify-between items-center">
                     <label className="text-[10px] font-mono uppercase tracking-wider text-[#78716C] font-bold">
-                      {selectedEndpoint === '/api/scriptures' ? 'Request Parameters' : 'Request Body (JSON)'}
+                      {(selectedEndpoint === '/api/scriptures' || selectedEndpoint === '/api/dictionary') ? 'Request Parameters' : 'Request Body (JSON)'}
                     </label>
-                    {selectedEndpoint !== '/api/scriptures' && (
+                    {(selectedEndpoint !== '/api/scriptures' && selectedEndpoint !== '/api/dictionary') && (
                       <button
                         onClick={() => setReqBody(defaultBodies[selectedEndpoint])}
                         className="text-[10px] text-[#D97706] hover:text-[#B45309] transition-colors font-bold cursor-pointer"
@@ -285,9 +290,9 @@ print(data)`;
                       </button>
                     )}
                   </div>
-                  {selectedEndpoint === '/api/scriptures' ? (
+                  {(selectedEndpoint === '/api/scriptures' || selectedEndpoint === '/api/dictionary') ? (
                     <div className="flex-1 w-full bg-[#F5F5F4]/60 border border-[#E6E2D3] rounded-xl p-4 font-mono text-xs text-[#78716C] flex items-center justify-center text-center min-h-[220px]">
-                      GET request. No request body or extra payload parameters are required for retrieving the list of scriptures.
+                      GET request. No request body or extra payload parameters are required for retrieving the endpoint's resources.
                     </div>
                   ) : (
                     <textarea

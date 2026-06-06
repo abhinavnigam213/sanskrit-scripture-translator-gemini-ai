@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { createServer as createViteServer } from "vite";
 import { translateText, transliterateText, analyzeScripture } from "./server/translator.ts";
 import { POPULAR_SCRIPTURES } from "./src/data/scriptures.ts";
+import { SPECIALIZED_SCRIPTURE_DICT, VEDAS_DICT, UPANISHADS_DICT, GITA_DICT, RAMAYANA_DICT, PURANAS_DICT } from "./server/dictionaries.ts";
 
 // Load environment variables
 dotenv.config();
@@ -24,6 +25,18 @@ async function startServer() {
   // API Endpoint: Get popular scriptures
   app.get("/api/scriptures", (req, res) => {
     res.json(POPULAR_SCRIPTURES);
+  });
+
+  // API Endpoint: Get specialized scripture dictionary entries grouped by sacred category
+  app.get("/api/dictionary", (req, res) => {
+    res.json({
+      Vedas: VEDAS_DICT,
+      Upanishads: UPANISHADS_DICT,
+      Gita: GITA_DICT,
+      Ramayana: RAMAYANA_DICT,
+      Puranas: PURANAS_DICT,
+      all: SPECIALIZED_SCRIPTURE_DICT
+    });
   });
 
   // API Endpoint: Translate text between Sanskrit, Hindi, English

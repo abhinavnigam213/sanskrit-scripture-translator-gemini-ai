@@ -29,6 +29,7 @@ export interface TranslationResponse {
   translatedText: string;
   explanation?: string; // Philological or spiritual explanation representing Vedas/Gita context
   wordBreakdown?: WordBreakdown[]; // Detailed word-by-word parsing (excellent for Sanskrit)
+  isFallback?: boolean; // Indicates if request was fulfilled via local rule-based fallback
 }
 
 export interface TransliterateRequest {
@@ -59,4 +60,5 @@ export interface ScriptureAnalyzeResponse {
   spiritualSignificance: string;
   wordBreakdown: WordBreakdown[];
   poeticMeter?: string; // e.g., Anustubh, Gayatri, Tristubh meter
+  isFallback?: boolean; // Indicates if request was fulfilled via local rule-based fallback
 }

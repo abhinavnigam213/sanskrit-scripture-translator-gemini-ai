@@ -1,5 +1,26 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { TranslationResponse, ScriptureAnalyzeResponse, TransliterateResponse } from "../src/types.ts";
+import { SPECIALIZED_SCRIPTURE_DICT } from "./dictionaries.ts";
+import COMMON_VADIC_DICT_RAW from "../src/data/common_dictionary.json";
+import POPULAR_ARCHIVE_RAW from "../src/data/popular_archive.json";
+
+function getDictionaryHints(text: string): string {
+  const hints: string[] = [];
+  const words = text.split(/\s+/);
+  for (const w of words) {
+    const clean = w.replace(/[।॥,.\n\r]/g, "").trim();
+    if (!clean) continue;
+    if (SPECIALIZED_SCRIPTURE_DICT[clean]) {
+      const match = SPECIALIZED_SCRIPTURE_DICT[clean];
+      hints.push(`- "${clean}": [${match.category}] Grammar: ${match.grammar}, English definition: "${match.eng}", Hindi term: "${match.hin}"`);
+    }
+  }
+  
+  if (hints.length > 0) {
+    return `\nSpecialized Lexicon Hints (Use these exact theological definitions for terms from the text if they are relevant to your scriptural translation or breakdown):\n${hints.join('\n')}\n`;
+  }
+  return '';
+}
 
 let aiInstance: GoogleGenAI | null = null;
 
@@ -174,32 +195,24 @@ export function iastToPhonetic(iast: string): string {
     .trim();
 }
 
-// Generic word parser map
-const COMMON_VADIC_DICT: { [key: string]: { grammar: string; eng: string; hin: string } } = {
-  'नमः': { grammar: 'Noun (Nominative)', eng: 'salutation / bow', hin: 'प्रणाम / नमस्कार' },
-  'ॐ': { grammar: 'Sacred Pranava syllable', eng: 'the primordial cosmic sound', hin: 'परम तत्व का प्रतीक प्रणव ध्वनि' },
-  'शान्तिः': { grammar: 'Noun (Nominative Sg.)', eng: 'peace, absolute tranquility', hin: 'शान्ति और परम संतोष' },
-  'शान्ति': { grammar: 'Noun (Base)', eng: 'peace', hin: 'शान्ति' },
-  'सत्यम्': { grammar: 'Noun (Accusative/Nominative)', eng: 'truth, reality, existence', hin: 'सत्य / सनातन सच' },
-  'ज्ञानम्': { grammar: 'Noun (Accusative/Nominative)', eng: 'pure spiritual knowledge / wisdom', hin: 'आनंत ज्ञान / ज्ञान मार्ग' },
-  'आनन्द': { grammar: 'Noun (Base)', eng: 'unbound absolute bliss', hin: 'दिव्य आनंद / परमानंद' },
-  'योग': { grammar: 'Noun (Base)', eng: 'divine union / integration', hin: 'चित्त वृत्ति निरोध / योग' },
-  'कर्म': { grammar: 'Noun (Base)', eng: 'action, dedicated deed', hin: 'कर्तव्य कर्म / सेवा' },
-  'धर्म': { grammar: 'Noun (Base)', eng: 'righteousness, cosmic order, duty', hin: 'सनातन धर्म / कर्तव्य' },
-  'आत्मा': { grammar: 'Noun (Nominative)', eng: 'the divine self / inner consciousness', hin: 'आत्मा / चैतन्य स्वरूप' },
-  'गुरु': { grammar: 'Noun (Base)', eng: 'spiritual Preceptor / weight of wisdom', hin: 'गुरु / अंधकार मिटाने वाला' },
-  'सह': { grammar: 'Indeclinable Preposition (Avyaya)', eng: 'together / along with', hin: 'साथ-साथ' },
-  'मम': { grammar: 'Genitive Pronoun (Asmad)', eng: 'my / mine', hin: 'मेरा / मेरी' },
-  'च': { grammar: 'Conjunction particle (Avyaya)', eng: 'and', hin: 'और' },
-  'न': { grammar: 'Negation particle', eng: 'not / never', hin: 'मत / नहीं / कदापि नहीं' },
-  'इति': { grammar: 'Indeclinable particle', eng: 'thus / in this manner', hin: 'इस प्रकार समाप्त' }
-};
+// Generic word parser map loaded dynamically from JSON
+const COMMON_VADIC_DICT: Record<string, { grammar: string; eng: string; hin: string }> = COMMON_VADIC_DICT_RAW as Record<string, { grammar: string; eng: string; hin: string }>;
 
 function parseGenericWordBreakdown(word: string) {
   const cleanWord = word.trim().replace(/[।॥,.\n\r]/g, "");
   if (!cleanWord) return null;
 
   const iastWord = devanagariToIast(cleanWord);
+
+  if (SPECIALIZED_SCRIPTURE_DICT[cleanWord]) {
+    const entry = SPECIALIZED_SCRIPTURE_DICT[cleanWord];
+    return {
+      word: cleanWord,
+      grammar: `[${entry.category}] ${entry.grammar}`,
+      meaningEnglish: entry.eng,
+      meaningHindi: entry.hin
+    };
+  }
 
   if (COMMON_VADIC_DICT[cleanWord]) {
     return {
@@ -264,132 +277,9 @@ function parseGenericWordBreakdown(word: string) {
 // RICH ARCHIVE OF POPULAR VEDIC SCRIPTURES
 // ==========================================
 
-const POPULAR_ARCHIVE: { [key: string]: ScriptureAnalyzeResponse & { poeticMeter: string } } = {
-  'karma': {
-    verse: 'कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।\nमा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि॥',
-    identifiedSource: 'Bhagavad Gita 2.47',
-    transliterationIAST: 'karmaṇy-evādhikāras te mā phaleṣu kadācana ।\nmā-karma-phala-hetur bhūr mā te saṅgo ’stv akarmaṇi ॥',
-    transliterationPhonetic: 'Karmanye vadhika raste, Ma phaleshu kadachana; Ma karma phala hetur bhur, Ma te sangostv akarmani.',
-    translationEnglish: 'You have a right to perform your prescribed duty, but you are not entitled to the fruits of action. Never consider yourself the cause of the results of your activities, and never be attached to not doing your duty.',
-    translationHindi: 'तुम्हारा अधिकार केवल कर्म करने पर ही है, उसके फलों पर कभी नहीं। तुम स्वयं को अपने कर्मों के फलों का कारण मत मानो, और न ही अकर्मण्यता (कर्म न करने) में तुम्हारी आसक्ति हो।',
-    spiritualSignificance: 'This verse defines the classical concept of Nishkama Karma—selfless action. It advises focusing fully on creative execution and moral duties with psychological composure, releasing absolute obsession over future fruits or awards.',
-    poeticMeter: 'Anustubh',
-    wordBreakdown: [
-      { word: 'कर्मणि', grammar: 'Locative Singular ("in action")', meaningHindi: 'कर्म में', meaningEnglish: 'in action' },
-      { word: 'एव', grammar: 'Indeclinable emphasizing particle', meaningHindi: 'ही', meaningEnglish: 'only / indeed' },
-      { word: 'अधिकारः', grammar: 'Nominative Singular (Mascl.)', meaningHindi: 'अधिकार', meaningEnglish: 'right, authority' },
-      { word: 'ते', grammar: 'Genitive Pronoun (Yushmad)', meaningHindi: 'तुम्हारा', meaningEnglish: 'your, to thee' },
-      { word: 'मा', grammar: 'Negative adverb (Avyaya)', meaningHindi: 'मत / कभी नहीं', meaningEnglish: 'not / never' },
-      { word: 'फलेषु', grammar: 'Locative Plural Noun', meaningHindi: 'फलों में', meaningEnglish: 'in the fruits of action' },
-      { word: 'कदाचन', grammar: 'Indeclinable temporal adverb', meaningHindi: 'कभी भी', meaningEnglish: 'at any time / ever' },
-      { word: 'अकर्मणि', grammar: 'Locative Singular Noun', meaningHindi: 'अकर्म में (निष्क्रियता)', meaningEnglish: 'in inaction / non-performance' }
-    ]
-  },
-  'yada': {
-    verse: 'यदा यदा हि धर्मस्य ग्लानिर्भवति भारत।\nअभ्युत्थानमधर्मस्य तदात्मानं सृजाम्यहम्॥',
-    identifiedSource: 'Bhagavad Gita 4.7',
-    transliterationIAST: 'yadā yadā hi dharmasya glānir bhavati bhārata ।\nabhyutthānam adharmasya tadātmanāṁ sṛjāmy aham ॥',
-    transliterationPhonetic: 'Yada yada hi dharmasya, glanir bhavati bharata; Abhyutthanam adharmasya, tadatmanam srijamy aham.',
-    translationEnglish: 'Whenever and wherever there is a decline in religious practice, O descendant of Bharata, and a predominant rise of irreligion—at that time I descend Myself.',
-    translationHindi: 'हे भारत (अर्जुन)! जब-जब धर्म की हानि और अधर्म का उत्थान होता है, तब-तब मैं अपने रूप (अवतार) की रचना करता हूँ।',
-    spiritualSignificance: 'Promotes hope and moral cosmic order. It indicates that divine consciousness actively manifests when ethical principles decay, reassuring humanity of the preservation of righteousness and truth.',
-    poeticMeter: 'Anustubh',
-    wordBreakdown: [
-      { word: 'यदा', grammar: 'Indeclinable adverb', meaningHindi: 'जब-जब', meaningEnglish: 'whenever' },
-      { word: 'धर्मस्य', grammar: 'Genitive Singular Noun', meaningHindi: 'धर्म की', meaningEnglish: 'of righteousness / duty' },
-      { word: 'ग्लानिः', grammar: 'Nominative Singular Noun', meaningHindi: 'हानि / पतन', meaningEnglish: 'decline / decay' },
-      { word: 'भवति', grammar: 'Present active verb 3rd Sg.', meaningHindi: 'होती है', meaningEnglish: 'occurs / happens' },
-      { word: 'भारत', grammar: 'Vocative noun', meaningHindi: 'हे अर्जुन (भरतवंशी)', meaningEnglish: 'O descendent of Bharata' },
-      { word: 'अधर्मस्य', grammar: 'Genitive Singular Noun', meaningHindi: 'अधर्म का', meaningEnglish: 'of unrighteousness' },
-      { word: 'सृजामि', grammar: 'Present active verb 1st Sg.', meaningHindi: 'सृजन करता हूँ / प्रकट होता हूँ', meaningEnglish: 'I manifest / create' },
-      { word: 'अहम्', grammar: 'Nominative pronoun 1st Sg.', meaningHindi: 'मैं', meaningEnglish: 'I / myself' }
-    ]
-  },
-  'tryambakam': {
-    verse: 'त्र्यम्बकं यजामहे सुगन्धिं पुष्टिवर्धनम्।\nउर्वारुकमिव बन्धनान्मृत्योर्मुक्षीय माऽमृतात्॥',
-    identifiedSource: 'Rigveda 7.59.12',
-    transliterationIAST: 'tryambakaṁ yajāmahe sugandhiṁ puṣṭi-vardhanam ।\nurvārukam iva bandhanān mṛtyor mukṣīya mā ’mṛtāt ॥',
-    transliterationPhonetic: 'Tryambakam yajamahe, sugandhim pushtivardhanam; Urvarukamiva bandhanan, mrityor mukshiya mamritat.',
-    translationEnglish: 'We worship the three-eyed Lord (Shiva), who is fragrant and who nourishes all development. May He liberate us from death, for the sake of immortality, just as a ripe cucumber is severed easily from its binding vine.',
-    translationHindi: 'हम तीन नेत्रों वाले भगवान शिव की पूजा करते हैं, जो सुगंधित हैं और जीवनदायिनी शक्ति का पोषण करते हैं। जैसे पका हुआ खरबूजा बेल से अनायास ही मुक्त हो जाता है, वैसे ही वे हमें मृत्यु के बंधनों से मुक्त करें, पर अमरत्व से नहीं।',
-    spiritualSignificance: 'One of the most powerful healing and liberation mantras in the Vedic tradition. It invokes Lord Shiva to release us from the fear of mortality and bind us to spiritual immortality.',
-    poeticMeter: 'Anustubh / Vedic',
-    wordBreakdown: [
-      { word: 'त्र्यम्बकम्', grammar: 'Accusative Singular Noun', meaningHindi: 'त्रिनेत्रधारी शिव को', meaningEnglish: 'the three-eyed lord' },
-      { word: 'यजामहे', grammar: 'Present active plural verb', meaningHindi: 'हम पूजते हैं', meaningEnglish: 'we worship' },
-      { word: 'सुगन्धिम्', grammar: 'Accusative adjective', meaningHindi: 'सुगंधित को', meaningEnglish: 'the fragrant one' },
-      { word: 'पुष्टिवर्धनम्', grammar: 'Accusative compound noun', meaningHindi: 'समृद्धि और पुष्टि बढ़ाने वाले को', meaningEnglish: 'he who increases nourishment' },
-      { word: 'उर्वारुकम्', grammar: 'Nominative compound', meaningHindi: 'खरबूजा / ककड़ी', meaningEnglish: 'melon / cucumber' },
-      { word: 'इव', grammar: 'Indeclinable comparison particle', meaningHindi: 'भांति / समान', meaningEnglish: 'as / like' },
-      { word: 'बन्धनात्', grammar: 'Ablative Singular Noun', meaningHindi: 'बंधन से / डंठल से', meaningEnglish: 'from bondage / attachment' },
-      { word: 'मृत्योः', grammar: 'Ablative/Genitive Sg. Noun', meaningHindi: 'मृत्यु से', meaningEnglish: 'from death' },
-      { word: 'मुक्षीय', grammar: 'Optative plural prayer verb', meaningHindi: 'मुक्त करें', meaningEnglish: 'may we be liberated' }
-    ]
-  },
-  'om bhur': {
-    verse: 'ॐ भूर् भुवः स्वः।\nतत् सवितुर्वरेण्यं भर्गो देवस्य धीमहि।\nधियो यो नः प्रचोदयात्॥',
-    identifiedSource: 'Rigveda 3.62.10',
-    transliterationIAST: 'oṁ bhūr bhuvaḥ svaḥ ।\ntat savitur vareṇyaṁ bhargo devasya dhīmahi ।\ndhiyo yo naḥ pracodayāt ॥',
-    transliterationPhonetic: 'Om bhur bhuvas svaha, tat savitur varenyam, bhargo devasya dhi-mahi, dhiyo yo nah prachodayat.',
-    translationEnglish: 'O Divine Mother, may your pure spiritual light illuminate our intellect and direct our understanding on the path of righteousness.',
-    translationHindi: 'उस प्राणस्वरूप, दुःखनाशक, सुखस्वरूप, श्रेष्ठ, तेजस्वी, पापनाशक, देवस्वरूप परमात्मा का हम ध्यान करें, जो हमारी बुद्धियों को धर्म-सद्मार्ग की ओर प्रेरित करे।',
-    spiritualSignificance: 'The core Gayatri prayer for cognitive empowerment and illumination. It is directed toward Savitr, the solar deity representing supreme consciousness.',
-    poeticMeter: 'Gayatri (3 times 8 syllable pattern)',
-    wordBreakdown: [
-      { word: 'ॐ', grammar: 'Mantra syllable (Pranava)', meaningHindi: 'ॐकार ध्वनि', meaningEnglish: 'primordial sound of Brahman' },
-      { word: 'भूः', grammar: 'Physical realm state', meaningHindi: 'भूलोक / पृथ्वी', meaningEnglish: 'material earth plane' },
-      { word: 'भुवः', grammar: 'Atmospheric mental realm', meaningHindi: 'अंतरिक्ष लोक', meaningEnglish: 'mental / vital plane' },
-      { word: 'स्वः', grammar: 'Causal spiritual realm', meaningHindi: 'स्वर्गलोक / चैतन्य', meaningEnglish: 'divine celestial plane' },
-      { word: 'सवितुः', grammar: 'Genitive Sg. (Savitṛ)', meaningHindi: 'सविता देव (सूर्य) का', meaningEnglish: 'of the luminous sun generator' },
-      { word: 'वरेण्यम्', grammar: 'Accusative adjective', meaningHindi: 'पूजनीय / उत्कृष्ट', meaningEnglish: 'adorable / supreme choice' },
-      { word: 'धीमहि', grammar: 'Present optative verb plural', meaningHindi: 'हम सब ध्यान धरते हैं', meaningEnglish: 'may we meditate upon' },
-      { word: 'धियः', grammar: 'Accusative plural noun', meaningHindi: 'हमारी बुद्धियों को', meaningEnglish: 'intellectual faculties' }
-    ]
-  },
-  'saha na': {
-    verse: 'ॐ सह नाववतु। सह नौ भुनक्तु।\nसह वीर्यं करवावहै।\nतेजस्वि नावधीतमस्तु मा विद्विषावहै॥\nॐ शान्तिः शान्तिः शान्तिः॥',
-    identifiedSource: 'Katha Upanishad Invocation',
-    transliterationIAST: 'oṁ saha nāvavatu | saha nau bhunaktu |\nsaha vīryaṁ karavāvahai |\ntejasvi nāv adhītam astu mā vidviṣāvahai ||\noṁ śāntiḥ śāntiḥ śāntiḥ ||',
-    transliterationPhonetic: 'Om saha navavatu; saha nau bhunaktu; saha viryam karavavahai; tejasvi navadhitamastu ma vidvishavahai. Om shanti shanti shantih.',
-    translationEnglish: 'Om. May the Divine protect us both (teacher and student). May He nourish us both. May we work together with great energy. May our study be enlightening and not give rise to hostility. Om, Peace, Peace, Peace.',
-    translationHindi: 'ॐ। ईश्वर हम दोनों (गुरु और शिष्य) की साथ-साथ रक्षा करे। वह हम दोनों का साथ-साथ पोषण करे। हम दोनों साथ मिलकर महान ऊर्जा के साथ कार्य करें। हमारा अध्ययन तेजोमय हो और हम कभी एक-दूसरे से द्वेष न करें। ॐ, शान्तिः, शान्तिः, शान्तिः।',
-    spiritualSignificance: 'A profound Vedic mantra highlighting teacher-student harmony, cooperative intellectual progress, and a non-competitive learning ecosystem free from academic envy.',
-    poeticMeter: 'Tristubh',
-    wordBreakdown: [
-      { word: 'सह', grammar: 'Indeclinable accompaniment', meaningHindi: 'साथ-साथ', meaningEnglish: 'together / in unison' },
-      { word: 'नाववतु', grammar: 'Compound dual prayer', meaningHindi: 'हम दोनों की रक्षा करें', meaningEnglish: 'let Him protect us both' },
-      { word: 'भुनक्तु', grammar: 'Active third-person verb', meaningHindi: 'पोषण करें', meaningEnglish: 'let Him nourish' },
-      { word: 'वीर्यम्', grammar: 'Accusative Singular Noun', meaningHindi: 'महान सामर्थ्य / बल', meaningEnglish: 'creative energy / power' },
-      { word: 'करवावहै', grammar: 'Optative dual active verb', meaningHindi: 'हम मिलकर संपन्न करें', meaningEnglish: 'may we both execute' },
-      { word: 'तेजस्वि', grammar: 'Adjective nominative neuter', meaningHindi: 'उज्ज्वल / तेजोमय', meaningEnglish: 'efficiently radiant' },
-      { word: 'मा', grammar: 'Negative prohibit particle', meaningHindi: 'मत / कभी नहीं', meaningEnglish: 'do not / never' },
-      { word: 'विद्विषावहै', grammar: 'Optative dual active verb', meaningHindi: 'परस्पर द्वेष भावना रखें', meaningEnglish: 'may we dispute / hate' }
-    ]
-  },
-  'isha vasyam': {
-    verse: 'ईशा वास्यमिदं सर्वं यत्किञ्च जगत्यां जगत्।\nतेन त्यक्तेन भुञ्जीथा मा गृधः कस्यस्विद्धनम्॥',
-    identifiedSource: 'Isha Upanishad 1',
-    transliterationIAST: 'īśā vāsyam idaṁ sarvaṁ yat kiñca jagatyāṁ jagat | \ntena tyaktena bhuñjīthā mā gṛdhaḥ kasya svid dhanam ||',
-    transliterationPhonetic: 'Isha vasyam idam sarvam, yat kincha jagatyam jagat; Tena tyaktena bhunjitha, ma gridhah kasya svid dhanam.',
-    translationEnglish: 'All this, whatever moves in this moving world, is enveloped by God. Therefore, find your enjoyment in renunciation; do not covet what belongs to anyone else.',
-    translationHindi: 'इस गतिशील संसार में जो कुछ भी चेतन-अचेतन है, वह सब ईश्वर द्वारा व्याप्त है। इसलिए त्यागभाव से ही इसका उपभोग करो; किसी दूसरे के धन की लालसा मत करो।',
-    spiritualSignificance: 'One of the peak declarations of Vedanta. It insists on seeing divine presence in every subatomic motion and teaches finding absolute happiness in non-possessiveness.',
-    poeticMeter: 'Anustubh',
-    wordBreakdown: [
-      { word: 'ईशा', grammar: 'Instrumental Sg. (Īśā)', meaningHindi: 'परमात्मा द्वारा', meaningEnglish: 'by the Supreme Ruler' },
-      { word: 'वास्यम्', grammar: 'Gerundive adjective', meaningHindi: 'व्याप्त रहने योग्य / ढका हुआ', meaningEnglish: 'to be lived in / covered' },
-      { word: 'इदम्', grammar: 'Neuter pronoun', meaningHindi: 'यह सब', meaningEnglish: 'this' },
-      { word: 'सर्वम्', grammar: 'Neuter adjective', meaningHindi: 'समुद्र / सम्पूर्ण', meaningEnglish: 'all / everything' },
-      { word: 'जगत्याम्', grammar: 'Locative Sg. Noun (fem.)', meaningHindi: 'ब्रह्मांड में', meaningEnglish: 'in the earth realm' },
-      { word: 'तेन', grammar: 'Instrumental pronoun', meaningHindi: 'उस (त्याग) से', meaningEnglish: 'by that' },
-      { word: 'त्यक्तेन', grammar: 'Instrumental Singular', meaningHindi: 'त्याग भावना भाव से', meaningEnglish: 'with detachment' },
-      { word: 'भुञ्जीथाः', grammar: 'Optative 2nd Person singular', meaningHindi: 'उपभोग करो / आनंद लो', meaningEnglish: 'enjoy / nourish thyself' },
-      { word: 'गृधः', grammar: 'Aorist/Injunctive verb (covet)', meaningHindi: 'लालच करो / कामना करो', meaningEnglish: 'lust after / covet' }
-    ]
-  }
-};
+const POPULAR_ARCHIVE: Record<string, ScriptureAnalyzeResponse & { poeticMeter: string }> = POPULAR_ARCHIVE_RAW as Record<string, ScriptureAnalyzeResponse & { poeticMeter: string }>;
 
-function tryMatchingScriptureArchive(text: string): typeof POPULAR_ARCHIVE[0] | null {
+function tryMatchingScriptureArchive(text: string): (ScriptureAnalyzeResponse & { poeticMeter: string }) | null {
   const normInput = text.replace(/[\s\s\r\n\t।॥.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").toLowerCase();
   
   if (normInput.includes("कर्म") || normInput.includes("karma")) return POPULAR_ARCHIVE['karma'];
@@ -415,10 +305,12 @@ export async function translateText(
   try {
     const ai = getAiClient();
     const contextPrompt = scriptureContext ? `The text is from ${scriptureContext} or related Hindu scripture.` : '';
+    const dictHints = getDictionaryHints(text);
     const prompt = `Translate the following text.
 Source Language: ${sourceLang}
 Target Language: ${targetLang}
 Context: ${contextPrompt}
+${dictHints}
 
 Text to translate:
 "${text}"
@@ -491,7 +383,8 @@ Provide the output strictly in the specified JSON structure.`;
         targetLang: targetLang,
         translatedText: isHindi ? archiveMatch.translationHindi : archiveMatch.translationEnglish,
         explanation: `${archiveMatch.spiritualSignificance} (⚠️ Computed via Local Archive Backup because Live API encountered normal free-tier quota limitations)`,
-        wordBreakdown: archiveMatch.wordBreakdown
+        wordBreakdown: archiveMatch.wordBreakdown,
+        isFallback: true
       };
     }
 
@@ -500,12 +393,38 @@ Provide the output strictly in the specified JSON structure.`;
     const breakdown = tokens.map(t => parseGenericWordBreakdown(t)).filter(Boolean) as any[];
     const iastText = devanagariToIast(text);
 
+    // Try matching if the text (or trimmed version) exists in our dictionary
+    const cleanInput = text.trim().replace(/[।॥,.\n\r]/g, "");
+    const dictMatch = COMMON_VADIC_DICT[cleanInput];
+    
+    let trText = "";
+    if (dictMatch) {
+      trText = targetLang === 'english' ? dictMatch.eng : dictMatch.hin;
+    } else {
+      // Try word-by-word construction
+      const words = tokens.map(token => {
+        const wordClean = token.trim().replace(/[।॥,.\n\r]/g, "");
+        const match = COMMON_VADIC_DICT[wordClean];
+        if (match) {
+          return targetLang === 'english' ? match.eng : match.hin;
+        }
+        return null;
+      }).filter(Boolean);
+      
+      if (words.length > 0) {
+        trText = words.join(" / ");
+      } else {
+        trText = targetLang === 'english' ? `Rendered translation: "${iastText}"` : `हिन्दी रूप: "${text}"`;
+      }
+    }
+
     return {
       sourceLang: 'sanskrit',
       targetLang: targetLang,
-      translatedText: targetLang === 'english' ? `Rendered translation: "${iastText}"` : `हिन्दी रूप: "${text}"`,
-      explanation: `⚠️ [VedicEngine Offline Backup Active] Live Gemini translation services are currently exhausted. Transliteration computed locally successfully.\n\nRaw text: "${iastText}"`,
-      wordBreakdown: breakdown
+      translatedText: trText,
+      explanation: `⚠️ [VedicEngine Offline Backup Active] Live Gemini translation services are currently exhausted. Transliteration and local dictionary lookup completed locally successfully.\n\nRaw text: "${iastText}"`,
+      wordBreakdown: breakdown,
+      isFallback: true
     };
   }
 }
@@ -591,9 +510,11 @@ export async function analyzeScripture(
   try {
     const ai = getAiClient();
     const contextText = sourceContext ? `Contextual source hint: ${sourceContext}` : '';
+    const dictHints = getDictionaryHints(text);
     const prompt = `Analyze the following Hindu scripture/verse in deep detail:
 "${text}"
 ${contextText}
+${dictHints}
 
 Extract or compute:
 1. Identified scripture source (e.g. Bhagavad Gita chapter/verse, Veda mandala, Upanishad name).
@@ -666,7 +587,8 @@ Always provide the response conforming strictly to the requested JSON structure.
     if (archiveMatch) {
       return {
         ...archiveMatch,
-        spiritualSignificance: `${archiveMatch.spiritualSignificance}\n\n⚠️ [Offline Scholar Engine Active] Analysis computed locally using built-in Vedic corpus archives. Free-tier live Gemini key is resting or has exceeded rate limitations.`
+        spiritualSignificance: `${archiveMatch.spiritualSignificance}\n\n⚠️ [Offline Scholar Engine Active] Analysis computed locally using built-in Vedic corpus archives. Free-tier live Gemini key is resting or has exceeded rate limitations.`,
+        isFallback: true
       };
     }
 
@@ -685,7 +607,8 @@ Always provide the response conforming strictly to the requested JSON structure.
       translationHindi: `देवनागरी लिप्यन्तरण: "${text}"`,
       spiritualSignificance: `⚠️ [Offline Scholar Engine Active] This verse has been parsed using are-limit fallback filters due to live Gemini API rate limit restrictions in settings.\n\nPhonetic and character sandhis are mapped successfully. Live explanations will load once API keys refresh.`,
       wordBreakdown: elementsBreakdown,
-      poeticMeter: tokens.length >= 8 ? "Anustubh (Possibility)" : "Vedic Chanting Meter"
+      poeticMeter: tokens.length >= 8 ? "Anustubh (Possibility)" : "Vedic Chanting Meter",
+      isFallback: true
     };
   }
 }

@@ -1,85 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  BookOpen, 
   Sparkles, 
-  ArrowRight, 
-  RefreshCw, 
-  Copy, 
-  Check, 
   Book, 
-  Trash2, 
-  Terminal, 
   Globe, 
-  HelpCircle,
-  Activity,
-  AlertCircle,
-  FileCode,
-  Compass
+  BookOpen, 
+  Terminal, 
+  AlertCircle
 } from 'lucide-react';
+
 import { POPULAR_SCRIPTURES } from './data/scriptures.ts';
-import { Scripture, TranslationResponse, ScriptureAnalyzeResponse, TransliterateResponse } from './types.ts';
+import { Scripture, ScriptureAnalyzeResponse, TransliterateResponse } from './types.ts';
+import { webDevanagariToSlp1 } from './utils/transliteration.ts';
+
+// Child components
+import Header from './components/Header.tsx';
+import PresetScriptures from './components/PresetScriptures.tsx';
+import TranslationWorkbench from './components/TranslationWorkbench.tsx';
+import TranslationTab from './components/TranslationTab.tsx';
+import GrammarTab from './components/GrammarTab.tsx';
+import TransliterationTab from './components/TransliterationTab.tsx';
+import DictionaryTab from './components/DictionaryTab.tsx';
 import ApiPlayground from './components/ApiPlayground.tsx';
-
-function webDevanagariToSlp1(text: string): string {
-  const vowels: { [key: string]: string } = {
-    'अ': 'a', 'आ': 'A', 'इ': 'i', 'ई': 'I', 'उ': 'u', 'ऊ': 'U', 'ऋ': 'f', 'ॠ': 'F', 'ऌ': 'x', 'ॡ': 'X',
-    'ए': 'e', 'ऐ': 'E', 'ओ': 'o', 'औ': 'O'
-  };
-
-  const matras: { [key: string]: string } = {
-    'ा': 'A', 'ि': 'i', 'ी': 'I', 'ु': 'u', 'ू': 'U', 'ृ': 'f', 'ॄ': 'F', 'ॢ': 'x', 'ॣ': 'X',
-    'े': 'e', 'ै': 'E', 'ो': 'o', 'ौ': 'O'
-  };
-
-  const consonants: { [key: string]: string } = {
-    'क': 'k', 'ख': 'K', 'ग': 'g', 'घ': 'G', 'ङ': 'N',
-    'च': 'c', 'छ': 'C', 'ज': 'j', 'झ': 'J', 'ञ': 'Y',
-    'ट': 'w', 'ठ': 'W', 'ड': 'q', 'ढ': 'Q', 'ण': 'R',
-    'त': 't', 'थ': 'T', 'द': 'd', 'ध': 'D', 'न': 'n',
-    'प': 'p', 'फ': 'P', 'ब': 'b', 'भ': 'B', 'म': 'm',
-    'य': 'y', 'र': 'r', 'ल': 'l', 'व': 'v',
-    'श': 'S', 'ष': 'z', 'स': 's', 'ह': 'h',
-    'ळ': 'L', 'क्ष': 'kz', 'त्र': 'tr', 'ज्ञ': 'jY'
-  };
-
-  const shunya: { [key: string]: string } = {
-    'ं': 'M',
-    'ः': 'H',
-    'ँ': '~'
-  };
-
-  let result = '';
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const nextChar = text[i + 1];
-
-    if (char === 'ॐ') {
-      result += 'oM';
-      continue;
-    }
-
-    if (consonants[char] !== undefined) {
-      let base = consonants[char];
-      if (nextChar === '्') {
-        result += base;
-        i++; // skip halant
-      } else if (matras[nextChar] !== undefined) {
-        result += base + matras[nextChar];
-        i++; // skip matra
-      } else {
-        result += base + 'a';
-      }
-    } else if (vowels[char] !== undefined) {
-      result += vowels[char];
-    } else if (shunya[char] !== undefined) {
-      result += shunya[char];
-    } else {
-      result += char === '।' ? '|' : char === '॥' ? '||' : char === 'ऽ' ? "'" : char;
-    }
-  }
-  return result;
-}
+import Footer from './components/Footer.tsx';
 
 export default function App() {
   const [text, setText] = useState<string>(POPULAR_SCRIPTURES[0].verse);
@@ -88,7 +31,7 @@ export default function App() {
   const [scriptureContext, setScriptureContext] = useState<string>(POPULAR_SCRIPTURES[0].source);
   
   // Tabs for the result workspace
-  const [activeTab, setActiveTab] = useState<'translation' | 'grammar' | 'transliteration' | 'api'>('translation');
+  const [activeTab, setActiveTab] = useState<'translation' | 'grammar' | 'transliteration' | 'api' | 'dictionary'>('translation');
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
   // Loading and Error state
@@ -314,8 +257,20 @@ export default function App() {
 
   const handleCopyText = (content: string, key: string) => {
     navigator.clipboard.writeText(content);
+    copiedTextAnim(key);
+  };
+
+  const copiedTextAnim = (key: string) => {
     setCopiedText(key);
     setTimeout(() => setCopiedText(null), 2000);
+  };
+
+  const handleTranslateWord = (word: string, category: string) => {
+    setText(word);
+    if (sourceLang === 'hindi' || sourceLang === 'english') {
+      setSourceLang('sanskrit');
+    }
+    setScriptureContext(category);
   };
 
   // Dynamically compute translation card content to prevent "Use Hindi target selector" or empty scenarios and cleanly handle Sanskrit translations
@@ -379,40 +334,7 @@ export default function App() {
       <div className="flex-1 w-full max-w-7xl mx-auto px-4 py-6 md:py-8 flex flex-col space-y-6">
 
         {/* Unified Application Header banner */}
-        <header id="app-header-section" className="relative p-6 rounded-2xl bg-[#F9F7F2] border border-[#E6E2D3] flex flex-col md:flex-row justify-between items-start md:items-center gap-4 overflow-hidden shadow-sm">
-          
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[#D97706] shadow-sm flex items-center justify-center">
-              <BookOpen className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-[#D97706] tracking-widest text-[10px] font-bold uppercase bg-[#D97706]/10 px-2 py-0.5 rounded border border-[#D97706]/20 shadow-sm">
-                  Veda-Vāṇī
-                </span>
-                <span className="text-[10px] bg-[#E6E2D3] text-[#57534E] font-mono px-1.5 py-0.5 rounded border border-[#E6E2D3]">
-                  v1.2 Full-Stack
-                </span>
-              </div>
-              <h1 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-[#1C1917] mt-1">
-                Scripture <span className="font-sans font-normal text-[#D97706]">Translator</span> & Transliteration
-              </h1>
-              <p className="font-serif text-xs text-[#78716C] mt-1 italic tracking-normal">
-                "ॐ असतो मा सद्गमय। तमसो मा ज्योतिर्गमय।" — Lead us from darkness to light.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-end gap-1 text-right self-stretch md:self-auto bg-[#F9F7F2] p-3 rounded-xl border border-[#E6E2D3]">
-            <div className="flex items-center gap-1 text-[#57534E] text-xs">
-              <Compass className="w-4 h-4 text-[#D97706] animate-pulse" />
-              <span className="font-semibold text-[#1C1917]">Sanskrit • Hindi • English</span>
-            </div>
-            <p className="text-[10px] text-[#78716C] mt-1 leading-relaxed">
-              Vedic parsing engine powered by Gemini AI model with word-by-word sandhi logic.
-            </p>
-          </div>
-        </header>
+        <Header />
 
         {/* Global Warning Banner for missing API credentials */}
         {apiError && apiError.includes("GEMINI_API_KEY") && (
@@ -425,222 +347,88 @@ export default function App() {
           </div>
         )}
 
+        {/* Offline Fallback Active Notification Banner */}
+        {analysisResult?.isFallback && (
+          <div className="p-4 bg-[#FFFBEB] border border-[#FDE68A] rounded-xl text-[#78350F] flex items-start gap-3 text-xs leading-relaxed shadow-sm">
+            <AlertCircle className="w-5 h-5 text-[#D97706] shrink-0 mt-0.5 animate-pulse" />
+            <div>
+              <span className="font-bold block text-[#92400E] mb-1 font-serif text-sm">🕉️ Offline Scholar Engine Fallback Active</span>
+              Live Gemini AI translation quota is currently exhausted or resting. The application has automatically engaged its offline transliterator, rule-based sandhi analyzer, and preloaded Classical scripture corpus. You can still transliterate any text and translate popular matches entirely offline!
+            </div>
+          </div>
+        )}
+
         {/* SCRIPTURE DOCK: pre-loaded examples click picker */}
-        <section id="popular-scriptures-bar" className="space-y-2">
-          <div className="flex items-center gap-1.5 px-1">
-            <Compass className="w-3.5 h-3.5 text-[#D97706]" />
-            <h2 className="text-xs font-mono uppercase tracking-widest text-[#78716C] font-semibold">
-              Browse Sanctified Verses / Popular Presets
-            </h2>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
-            {POPULAR_SCRIPTURES.map((sc) => {
-              const works = scriptureContext === sc.source;
-              return (
-                <button
-                  key={sc.id}
-                  onClick={() => selectScripture(sc)}
-                  className={`flex-shrink-0 text-left p-3.5 w-64 md:w-72 rounded-xl border transition-all duration-300 cursor-pointer ${works ? 'bg-white border-[#D97706] shadow-sm text-[#1C1917]' : 'bg-[#F9F7F2] border-[#E6E2D3] hover:bg-[#E6E2D3]/20 hover:border-[#D97706]/40 text-[#44403C]'}`}
-                >
-                  <div className="flex justify-between items-start">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#D97706]/10 border border-[#D97706]/20 text-[#D97706] font-semibold">
-                      {sc.category}
-                    </span>
-                    <span className="text-[10px] text-[#78716C] font-mono">{sc.source}</span>
-                  </div>
-                  <h4 className="font-serif text-sm font-semibold text-[#1C1917] mt-2 line-clamp-1">{sc.title}</h4>
-                  <p className="text-xs text-[#57534E] mt-1 font-serif line-clamp-2 italic leading-relaxed">
-                    {sc.verse}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <PresetScriptures 
+          scriptureContext={scriptureContext} 
+          onSelectScripture={selectScripture} 
+        />
 
         {/* MAIN ROW: Twin splits (Input Workspace Left, Results Console Right) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* LEFT COLUMN: Input Control Center (col-span 5) */}
           <div id="input-control-panel" className="lg:col-span-5 space-y-4">
-            
-            <div className="bg-[#F9F7F2] p-5 rounded-2xl border border-[#E6E2D3] flex flex-col space-y-4">
-              
-              <div className="flex justify-between items-center border-b border-[#E6E2D3] pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-[#D97706]" />
-                  <h3 className="font-serif font-bold text-[#1C1917]">Translation Workbench</h3>
-                </div>
-                <span className="text-[11px] font-mono text-[#57534E] bg-white px-2 py-1 rounded border border-[#E6E2D3]">
-                  {text.trim().length} characters
-                </span>
-              </div>
-
-              {/* Language Routing parameters */}
-              <div className="grid grid-cols-2 gap-3">
-                
-                {/* Source Select */}
-                <div className="flex flex-col space-y-1">
-                  <label className="text-[10px] font-mono text-[#78716C] uppercase tracking-wider font-semibold">Source Language</label>
-                  <select
-                    value={sourceLang}
-                    onChange={(e: any) => setSourceLang(e.target.value)}
-                    className="bg-white border border-[#E6E2D3] rounded-xl px-3 py-2 text-xs font-medium text-[#2D241E] focus:outline-none focus:border-[#D97706] shadow-sm"
-                  >
-                    <option value="sanskrit">Sanskrit (संस्कृतम्)</option>
-                    <option value="hindi">Hindi (हिन्दी)</option>
-                    <option value="english">English (Anglais)</option>
-                    <option value="auto">Auto-Detect Script</option>
-                  </select>
-                </div>
-
-                {/* Target Select */}
-                <div className="flex flex-col space-y-1">
-                  <label className="text-[10px] font-mono text-[#78716C] uppercase tracking-wider font-semibold">Target Language</label>
-                  <select
-                    value={targetLang}
-                    onChange={(e: any) => setTargetLang(e.target.value)}
-                    className="bg-white border border-[#E6E2D3] rounded-xl px-3 py-2 text-xs font-medium text-[#2D241E] focus:outline-none focus:border-[#D97706] shadow-sm"
-                  >
-                    <option value="english">English (Prose & Verse)</option>
-                    <option value="hindi">Hindi (गद्य अनुवाद)</option>
-                    <option value="sanskrit">Sanskrit (Devanagari mapping)</option>
-                  </select>
-                </div>
-
-              </div>
-
-              {/* Context prompt */}
-              <div className="flex flex-col space-y-1">
-                <div className="flex justify-between">
-                  <label className="text-[10px] font-mono text-[#78716C] uppercase tracking-wider font-semibold">Scriptural Context (Optional)</label>
-                  <span className="text-[9px] font-mono text-[#78716C]">Improves commentary match</span>
-                </div>
-                <input
-                  type="text"
-                  placeholder="e.g. Bhagavad Gita, Yajurveda, Upanishads"
-                  value={scriptureContext}
-                  onChange={(e) => setScriptureContext(e.target.value)}
-                  className="bg-white border border-[#E6E2D3] rounded-xl px-3 py-2 text-xs text-[#1C1917] focus:outline-none focus:border-[#D97706] font-serif placeholder:font-sans placeholder:text-[#A8A29E] shadow-sm"
-                />
-              </div>
-
-              {/* Large text workspace */}
-              <div className="flex flex-col space-y-1">
-                <div className="flex justify-between items-center text-[10px]">
-                  <label className="font-mono text-[#78716C] uppercase tracking-wider font-semibold">Verse Input (Devanagari or English Text)</label>
-                  <button 
-                    onClick={() => { setText(''); setScriptureContext(''); }}
-                    className="flex items-center gap-1 text-[10px] text-red-650 hover:text-red-750 transition-colors cursor-pointer font-semibold"
-                    title="Clear content"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    <span>Clear</span>
-                  </button>
-                </div>
-                
-                <textarea
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="Paste Sanskrit verse, Sloka, Mantra or commentary here (e.g. ॐ भूर् भुवः स्वः...)"
-                  className="w-full h-48 bg-white border border-[#E6E2D3] rounded-xl p-4 text-[#1C1917] font-serif placeholder:font-sans placeholder:text-[#A8A29E] leading-relaxed text-sm md:text-base focus:outline-none focus:border-[#D97706] resize-none shadow-sm"
-                />
-              </div>
-
-              {/* API and Processing triggers */}
-              <div className="flex flex-col gap-2 pt-2">
-                
-                {/* Advanced Indology Analysis Button */}
-                <button
-                  type="button"
-                  onClick={() => triggerAnalysis(text)}
-                  disabled={isLoading || !text.trim()}
-                  className="w-full flex items-center justify-center gap-2 bg-[#1C1917] hover:bg-[#2D241E] text-white font-bold tracking-wider uppercase py-3 rounded-xl transition-all duration-200 shadow-sm disabled:opacity-50 cursor-pointer text-xs"
-                >
-                  {isLoading ? (
-                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                  ) : (
-                    <Sparkles className="w-4 h-4 text-white fill-current" />
-                  )}
-                  <span>Translate & Analyze Verse</span>
-                </button>
-
-                {/* Direct Simple Translation / Transliteration alternate options */}
-                <div className="grid grid-cols-2 gap-2">
-                  
-                  <button
-                    onClick={triggerSimpleTranslation}
-                    disabled={isLoading || !text.trim()}
-                    className="py-2.5 px-3 bg-white border border-[#E6E2D3] text-[#57534E] hover:text-[#D97706] hover:bg-[#F9F7F2] rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
-                  >
-                    <Globe className="w-3.5 h-3.5 text-[#D97706]" />
-                    <span>Direct Translation</span>
-                  </button>
-
-                  <button
-                    onClick={() => triggerPureTransliteration('iast')}
-                    disabled={isLoading || !text.trim()}
-                    className="py-2.5 px-3 bg-white border border-[#E6E2D3] text-[#57534E] hover:text-[#D97706] hover:bg-[#F9F7F2] rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition-all shadow-sm cursor-pointer"
-                  >
-                    <FileCode className="w-3.5 h-3.5 text-[#D97706]" />
-                    <span>Build diacritics (IAST)</span>
-                  </button>
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* Quick helper about Sanskrit / Transliteration formats */}
-            <div className="p-4 bg-[#FDFBF7] border border-[#E6E2D3] rounded-xl flex items-start gap-3">
-              <HelpCircle className="w-4 h-4 text-[#78716C] shrink-0 mt-0.5" />
-              <div className="text-xs text-[#57534E] space-y-1">
-                <span className="font-bold text-[#D97706] font-serif text-[11px] block">Understanding Transliteration:</span>
-                <p><strong>Devanagari</strong> is the traditional divine script of India.</p>
-                <p><strong>IAST</strong> is the international scientific standard utilizing diacritic markers (like ī, ṣ, ṁ) for perfect pronouncing metrics.</p>
-                <p><strong>ITRANS</strong> is standard English-keyboard layout translation representing phonetic tones in simple characters.</p>
-              </div>
-            </div>
-
+            <TranslationWorkbench
+              text={text}
+              setText={setText}
+              sourceLang={sourceLang}
+              setSourceLang={setSourceLang}
+              targetLang={targetLang}
+              setTargetLang={setTargetLang}
+              scriptureContext={scriptureContext}
+              setScriptureContext={setScriptureContext}
+              isLoading={isLoading}
+              onTriggerAnalysis={() => triggerAnalysis(text)}
+              onTriggerSimpleTranslation={triggerSimpleTranslation}
+              onTriggerPureTransliteration={triggerPureTransliteration}
+            />
           </div>
 
           {/* RIGHT COLUMN: Golden Detailed Results Center (col-span 7) */}
           <div id="results-panel" className="lg:col-span-7 flex flex-col space-y-4">
             
             {/* Header Tabs */}
-            <div className="flex bg-[#F5F5F4] border border-[#E6E2D3] p-1 rounded-xl w-full select-none">
+            <div className="flex bg-[#F5F5F4] border border-[#E6E2D3] p-1 rounded-xl w-full select-none overflow-x-auto">
               
               <button
                 onClick={() => setActiveTab('translation')}
-                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'translation' ? 'bg-white shadow-sm rounded-lg text-[#1C1917] font-bold border border-[#E6E2D3]' : 'text-[#57534E] hover:text-[#D97706]'}`}
+                className={`flex-1 min-w-[90px] py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'translation' ? 'bg-white shadow-sm rounded-lg text-[#1C1917] font-bold border border-[#E6E2D3]' : 'text-[#57534E] hover:text-[#D97706]'}`}
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Translation & Commentary</span>
+                <span>Translation</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('grammar')}
-                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'grammar' ? 'bg-white shadow-sm rounded-lg text-[#1C1917] font-bold border border-[#E6E2D3]' : 'text-[#57534E] hover:text-[#D97706]'}`}
+                className={`flex-1 min-w-[90px] py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'grammar' ? 'bg-white shadow-sm rounded-lg text-[#1C1917] font-bold border border-[#E6E2D3]' : 'text-[#57534E] hover:text-[#D97706]'}`}
               >
                 <Book className="w-3.5 h-3.5" />
-                <span>Padapatha Grammar</span>
+                <span>Padapatha</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('transliteration')}
-                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'transliteration' ? 'bg-white shadow-sm rounded-lg text-[#1C1917] font-bold border border-[#E6E2D3]' : 'text-[#57534E] hover:text-[#D97706]'}`}
+                className={`flex-1 min-w-[90px] py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'transliteration' ? 'bg-white shadow-sm rounded-lg text-[#1C1917] font-bold border border-[#E6E2D3]' : 'text-[#57534E] hover:text-[#D97706]'}`}
               >
                 <Globe className="w-3.5 h-3.5" />
-                <span>Transliteration Matrix</span>
+                <span>Transliteration</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('dictionary')}
+                className={`flex-1 min-w-[90px] py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'dictionary' ? 'bg-white shadow-sm rounded-lg text-[#1C1917] font-bold border border-[#E6E2D3]' : 'text-[#57534E] hover:text-[#D97706]'}`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Lexicon</span>
               </button>
 
               <button
                 onClick={() => setActiveTab('api')}
-                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'api' ? 'bg-white shadow-sm rounded-lg text-[#1C1917] font-bold border border-[#E6E2D3]' : 'text-[#57534E] hover:text-[#D97706]'}`}
+                className={`flex-1 min-w-[90px] py-2 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${activeTab === 'api' ? 'bg-white shadow-sm rounded-lg text-[#1C1917] font-bold border border-[#E6E2D3]' : 'text-[#57534E] hover:text-[#D97706]'}`}
               >
                 <Terminal className="w-3.5 h-3.5" />
-                <span>Developer APIs</span>
+                <span>APIs</span>
               </button>
 
             </div>
@@ -659,252 +447,35 @@ export default function App() {
 
                 {/* TAB 1: Detailed Commentary and prose values */}
                 {activeTab === 'translation' && (
-                  <motion.div
-                    key="tab-translation"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="space-y-5 flex-1 flex flex-col"
-                  >
-                    
-                    {/* Verse Identification header */}
-                    <div className="flex justify-between items-center bg-[#F9F7F2] p-4 rounded-xl border border-[#E6E2D3]">
-                      <div>
-                        <span className="text-[10px] uppercase font-mono tracking-wider text-[#D97706] font-bold animate-pulse">Identified Liturgy Resource</span>
-                        <h4 className="font-serif text-base font-bold text-[#1C1917] mt-1">{analysisResult?.identifiedSource || "Custom Sanskrit Input"}</h4>
-                      </div>
-                      {analysisResult?.poeticMeter && (
-                        <div className="text-right">
-                          <span className="text-[10px] uppercase font-mono tracking-wider text-[#78716C] font-bold block">Chhandas (Poetic Meter)</span>
-                          <span className="font-serif text-sm text-[#2D241E] mt-1 font-medium italic block">{analysisResult?.poeticMeter}</span>
-                        </div>
-                      )}
-                    </div>
-
-                     {/* Translations stack */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      
-                      {/* Left Dynamic Translation/Source Card */}
-                      <div className="p-6 bg-[#F9F7F2] border border-[#E6E2D3] rounded-xl flex flex-col relative">
-                        <div className="flex justify-between items-center text-[10px] text-[#78716C] font-mono tracking-wider mb-2 uppercase border-b border-[#E6E2D3] pb-1.5 font-bold">
-                          <span>{leftCardTitle}</span>
-                          <button 
-                            onClick={() => handleCopyText(leftCardContent, leftCardCopyKey)}
-                            className="text-[#D97706] hover:text-[#B45309] cursor-pointer"
-                          >
-                            {copiedText === leftCardCopyKey ? <Check className="w-3 h-3 text-green-600 font-bold" /> : <Copy className="w-3 h-3" />}
-                          </button>
-                        </div>
-                        <p className="text-sm text-[#1C1917] font-serif leading-relaxed italic mt-2">
-                          "{leftCardContent || "Translation not started. Run 'Translate' module to generate values."}"
-                        </p>
-                      </div>
-
-                      {/* Right Dynamic Translation Card */}
-                      <div className="p-6 bg-[#F9F7F2] border border-[#E6E2D3] rounded-xl flex flex-col relative font-serif">
-                        <div className="flex justify-between items-center text-[10px] text-[#78716C] font-mono tracking-wider mb-2 uppercase border-b border-[#E6E2D3] pb-1.5 font-bold">
-                          <span>{rightCardTitle}</span>
-                          <button 
-                            onClick={() => handleCopyText(rightCardContent, rightCardCopyKey)}
-                            className="text-[#D97706] hover:text-[#B45309] cursor-pointer"
-                          >
-                            {copiedText === rightCardCopyKey ? <Check className="w-3 h-3 text-green-600 font-bold" /> : <Copy className="w-3 h-3" />}
-                          </button>
-                        </div>
-                        <p className="text-sm text-[#1C1917] leading-relaxed italic mt-2">
-                          "{rightCardContent || "Translation not started. Run 'Translate' module to generate values."}"
-                        </p>
-                      </div>
-
-                    </div>
-
-                    {/* Deep theological explanation */}
-                    <div className="bg-[#FDFBF7] p-5 rounded-2xl border border-[#E6E2D3] space-y-4 shadow-none">
-                      <div className="flex items-center gap-1.5 text-[#D97706]">
-                        <Sparkles className="w-4 h-4 fill-[#D97706]" />
-                        <h4 className="font-serif text-sm font-bold tracking-wider uppercase">Spiritual Significance & Scholarly Commentary</h4>
-                      </div>
-                      <div className="font-sans text-xs text-[#44403C] leading-relaxed space-y-2">
-                        {analysisResult?.spiritualSignificance ? (
-                           analysisResult.spiritualSignificance.split('\n').map((para, i) => (
-                             <p key={i}>{para}</p>
-                           ))
-                        ) : (
-                          <p className="text-[#78716C] font-serif">Deep commentarial insights will appear here once translated via backend services.</p>
-                        )}
-                      </div>
-                    </div>
-
-                  </motion.div>
+                  <TranslationTab
+                    analysisResult={analysisResult}
+                    leftCardTitle={leftCardTitle}
+                    leftCardContent={leftCardContent}
+                    leftCardCopyKey={leftCardCopyKey}
+                    rightCardTitle={rightCardTitle}
+                    rightCardContent={rightCardContent}
+                    rightCardCopyKey={rightCardCopyKey}
+                    copiedText={copiedText}
+                    onCopy={handleCopyText}
+                  />
                 )}
 
                 {/* TAB 2: Padapatha Grammar elements */}
                 {activeTab === 'grammar' && (
-                  <motion.div
-                    key="tab-grammar"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="space-y-4 flex-1 flex flex-col"
-                  >
-                    <div className="bg-[#F9F7F2] p-4 rounded-xl border border-[#E6E2D3]">
-                      <span className="text-[10px] uppercase font-mono tracking-wider text-[#78716C] font-bold">Deconstructive Study</span>
-                      <h4 className="font-serif text-base font-bold text-[#1C1917]">Padapatha (Sadhana Word Breaks)</h4>
-                      <p className="text-xs text-[#57534E] mt-1 text-justify leading-relaxed">
-                        Sanskrit compounds multiple words together through complex phonetic shift rules called <strong>Sandhi</strong>. The grid below splits the compounds and details grammatical cases.
-                      </p>
-                    </div>
-
-                    <div className="border border-[#E6E2D3] rounded-xl overflow-hidden overflow-x-auto flex-1 bg-white">
-                      <table className="w-full text-left border-collapse text-xs">
-                        <thead>
-                          <tr className="bg-[#F9F7F2] border-b border-[#E6E2D3] font-mono text-[#44403C] text-[10px] font-bold">
-                            <th className="p-3">Sanskrit Word / Root</th>
-                            <th className="p-3">Grammar & Case Conjugation</th>
-                            <th className="p-3">English Meanings</th>
-                            <th className="p-3">हिन्दी अनुवाद (Hindi)</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#E6E2D3] font-sans">
-                          {analysisResult?.wordBreakdown && analysisResult.wordBreakdown.length > 0 ? (
-                            analysisResult.wordBreakdown.map((row, i) => (
-                              <tr key={i} className="hover:bg-[#FDFBF7] transition-colors">
-                                <td className="p-3 font-serif font-bold text-[#D97706]">{row.word}</td>
-                                <td className="p-3 font-mono text-[#57534E] text-[11px]">{row.grammar || 'Noun / indeclinable'}</td>
-                                <td className="p-3 text-[#2D241E]">{row.meaningEnglish}</td>
-                                <td className="p-3 text-[#44403C] font-serif">{row.meaningHindi}</td>
-                              </tr>
-                            ))
-                          ) : (
-                            <tr>
-                              <td colSpan={4} className="p-12 text-center text-[#78716C] font-serif">
-                                Word-by-word grammatical splits are available when translating. Press "Translate & Analyze" to generate database metrics.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </motion.div>
+                  <GrammarTab analysisResult={analysisResult} />
                 )}
 
                 {/* TAB 3: Transliteration Matrix */}
                 {activeTab === 'transliteration' && (
-                  <motion.div
-                    key="tab-transliteration"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="space-y-4 flex-1 flex flex-col"
-                  >
-                    <div className="bg-[#F9F7F2] p-4 rounded-xl border border-[#E6E2D3]">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="text-[10px] uppercase font-mono tracking-wider text-[#78716C] font-bold">Script Converter Matrix</span>
-                          <h4 className="font-serif text-base font-bold text-[#1C1917]">Orthographic Character Conversions</h4>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              triggerPureTransliteration('english_phonetic');
-                              triggerPureTransliteration('slp1');
-                            }}
-                            className="bg-white border border-[#E6E2D3] hover:text-[#D97706] px-3 py-1.5 text-[10px] font-mono rounded-lg transition-colors cursor-pointer"
-                          >
-                            Regenerate Matrix
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-xs text-[#57534E] mt-1 lg:max-w-2xl text-justify leading-relaxed">
-                        Indic transliteration maps original characters verbatim into other script standards so researchers can pronounce mantras perfectly without reading Devanagari.
-                      </p>
-                    </div>
-
-                    {/* Standardized Conversions Panel */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
-                      
-                      {/* DEVANAGARI CARD */}
-                      <div className="bg-[#F9F7F2] border border-[#E6E2D3] rounded-xl p-4 flex flex-col">
-                        <div className="flex justify-between items-center text-[10px] text-[#D97706] font-mono tracking-wider uppercase border-b border-[#E6E2D3] pb-1.5 mb-2 font-bold">
-                          <span>Devanagari (Traditional Sanskrit)</span>
-                          <button 
-                            onClick={() => handleCopyText(transliterations.devanagari, 'dev')}
-                            className="text-[#D97706] hover:text-[#B45309] cursor-pointer"
-                          >
-                            {copiedText === 'dev' ? <Check className="w-3 h-3 text-green-600 font-bold" /> : <Copy className="w-3 h-3" />}
-                          </button>
-                        </div>
-                        <p className="flex-1 text-[#1C1917] font-serif whitespace-pre-wrap text-sm leading-relaxed antialiased">
-                          {transliterations.devanagari}
-                        </p>
-                      </div>
-
-                      {/* IAST CARD */}
-                      <div className="bg-[#F9F7F2] border border-[#E6E2D3] rounded-xl p-4 flex flex-col">
-                        <div className="flex justify-between items-center text-[10px] text-[#1C1917] font-mono tracking-wider uppercase border-b border-[#E6E2D3] pb-1.5 mb-2 font-bold">
-                          <span>IAST (Academic Diacritics)</span>
-                          <button 
-                            onClick={() => handleCopyText(transliterations.iast, 'ias')}
-                            className="text-[#D97706] hover:text-[#B45309] cursor-pointer"
-                          >
-                            {copiedText === 'ias' ? <Check className="w-3 h-3 text-green-600 font-bold" /> : <Copy className="w-3 h-3" />}
-                          </button>
-                        </div>
-                        <p className="flex-1 text-[#2D241E] font-serif whitespace-pre-wrap text-sm leading-relaxed italic tracking-wider">
-                          {transliterations.iast}
-                        </p>
-                      </div>
-
-                      {/* ITRANS CARD */}
-                      <div className="bg-[#F9F7F2] border border-[#E6E2D3] rounded-xl p-4 flex flex-col">
-                        <div className="flex justify-between items-center text-[10px] text-[#44403C] font-mono tracking-wider uppercase border-b border-[#E6E2D3] pb-1.5 mb-2 font-bold">
-                          <span>ITRANS (Keyboard ASCII Syntax)</span>
-                          <button 
-                            onClick={() => handleCopyText(transliterations.itrans, 'itr')}
-                            className="text-[#D97706] hover:text-[#B45309] cursor-pointer"
-                          >
-                            {copiedText === 'itr' ? <Check className="w-3 h-3 text-green-600 font-bold" /> : <Copy className="w-3 h-3" />}
-                          </button>
-                        </div>
-                        <p className="flex-1 text-[#57534E] font-mono whitespace-pre-wrap text-xs leading-relaxed">
-                          {transliterations.itrans}
-                        </p>
-                      </div>
-
-                      {/* CHANTING FRIENDLY CARD */}
-                      <div className="bg-[#F9F7F2] border border-[#E6E2D3] rounded-xl p-4 flex flex-col">
-                        <div className="flex justify-between items-center text-[10px] text-[#57534E] font-mono tracking-wider uppercase border-b border-[#E6E2D3] pb-1.5 mb-2 font-bold">
-                          <span>English Phonetic (Easy Chanting)</span>
-                          <button 
-                            onClick={() => handleCopyText(transliterations.phonetic, 'pho')}
-                            className="text-[#D97706] hover:text-[#B45309] cursor-pointer"
-                          >
-                            {copiedText === 'pho' ? <Check className="w-3 h-3 text-green-600 font-bold" /> : <Copy className="w-3 h-3" />}
-                          </button>
-                        </div>
-                        <p className="flex-1 text-[#1C1917] font-serif whitespace-pre-wrap text-xs leading-relaxed">
-                          {transliterations.phonetic}
-                        </p>
-                      </div>
-
-                      {/* SPL1 CARD */}
-                      <div className="bg-[#F9F7F2] border border-[#E6E2D3] rounded-xl p-4 flex flex-col">
-                        <div className="flex justify-between items-center text-[10px] text-[#0F766E] font-mono tracking-wider uppercase border-b border-[#E6E2D3] pb-1.5 mb-2 font-bold font-semibold">
-                          <span>Sanskrit Library Phonetic (SLP1)</span>
-                          <button 
-                            onClick={() => handleCopyText(transliterations.slp1, 'slp')}
-                            className="text-[#D97706] hover:text-[#B45309] cursor-pointer"
-                          >
-                            {copiedText === 'slp' ? <Check className="w-3 h-3 text-green-600 font-bold" /> : <Copy className="w-3 h-3" />}
-                          </button>
-                        </div>
-                        <p className="flex-1 text-[#115E59] font-mono whitespace-pre-wrap text-xs leading-relaxed tracking-wide font-medium">
-                          {transliterations.slp1}
-                        </p>
-                      </div>
-
-                    </div>
-                  </motion.div>
+                  <TransliterationTab
+                    transliterations={transliterations}
+                    copiedText={copiedText}
+                    onCopy={handleCopyText}
+                    onRegenerateMatrix={() => {
+                      triggerPureTransliteration('english_phonetic');
+                      triggerPureTransliteration('slp1');
+                    }}
+                  />
                 )}
 
                 {/* TAB 4: API Playground Document module */}
@@ -920,6 +491,11 @@ export default function App() {
                   </motion.div>
                 )}
 
+                {/* TAB 5: Sacred Scripture Lexicon and Specialized Dictionary */}
+                {activeTab === 'dictionary' && (
+                  <DictionaryTab onTranslateWord={handleTranslateWord} />
+                )}
+
               </AnimatePresence>
             </div>
 
@@ -930,66 +506,11 @@ export default function App() {
       </div>
 
       {/* Styled Footer containing API endpoints and credentials instruction info */}
-      <footer className="bg-[#F9F7F2] border-t border-[#E6E2D3] mt-12 py-10 px-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-xs text-[#57534E]">
-          
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[#D97706]">
-              <BookOpen className="w-4 h-4" />
-              <span className="font-serif font-bold tracking-wider uppercase text-[#1C1917] h-4">Digital Sanatan Archives</span>
-            </div>
-            <p className="leading-relaxed">
-              Vedic translators split classical Sandhi rules of Sanskrit grammar phonetically. This workspace is strictly aligned with classical commentaries from Shankaracharya, Ramanujacharya, and contemporary Indological research.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h5 className="font-serif font-bold text-[#1C1917] tracking-wider uppercase">Active REST Endpoints</h5>
-            <ul className="space-y-1.5 font-mono text-[11px] text-[#2D241E]">
-              <li className="flex gap-2 items-center">
-                <span className="px-1.5 py-0.5 bg-green-100 text-green-800 text-[9px] font-bold rounded border border-green-200">POST</span>
-                <span>/api/translate</span>
-              </li>
-              <li className="flex gap-2 items-center">
-                <span className="px-1.5 py-0.5 bg-green-100 text-green-800 text-[9px] font-bold rounded border border-green-200">POST</span>
-                <span>/api/transliterate</span>
-              </li>
-              <li className="flex gap-2 items-center">
-                <span className="px-1.5 py-0.5 bg-green-100 text-green-800 text-[9px] font-bold rounded border border-green-200">POST</span>
-                <span>/api/analyze</span>
-              </li>
-              <li className="flex gap-2 items-center">
-                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 text-[9px] font-bold rounded border border-blue-200">GET</span>
-                <span>/api/scriptures</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="space-y-2">
-            <h5 className="font-mono text-[#1C1917] uppercase tracking-widest text-[10px] font-bold">API Specifications & Response</h5>
-            <p className="leading-relaxed">
-              Access scripture translation data in robust JSON formats. Build apps, Slackbots, or websites by utilizing the unified, cross-origin supported Express API system.
-            </p>
-            <div className="pt-2">
-              <span className="text-[10px] bg-[#D97706]/10 border border-[#D97706]/20 text-[#D97706] px-2.5 py-1 rounded-md font-mono inline-block font-semibold">
-                Bearer Token Authorized
-              </span>
-            </div>
-          </div>
-
-        </div>
-
-        <div className="max-w-7xl mx-auto border-t border-[#E6E2D3] mt-8 pt-6 flex flex-col md:flex-row justify-between items-center text-[11px] text-[#78716C] gap-4">
-          <p>© 2026 Scriptural Translators Hub. Protected under Apache-2.0 License.</p>
-          <div className="flex gap-4">
-            <a href="#dev-api-playground" onClick={() => setActiveTab('api')} className="hover:text-[#D97706] transition-colors font-medium">API References</a>
-            <span>•</span>
-            <a href="#popular-scriptures-bar" className="hover:text-[#D97706] transition-colors font-medium">Sanctified Presets</a>
-            <span>•</span>
-            <a href="#app-header-section" className="hover:text-[#D97706] transition-colors font-medium">Security Details</a>
-          </div>
-        </div>
-      </footer>
+      <Footer onTabChange={(tab) => {
+        setActiveTab(tab);
+        // Scroll to results-panel softly
+        document.getElementById('results-panel')?.scrollIntoView({ behavior: 'smooth' });
+      }} />
 
     </div>
   );
