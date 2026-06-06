@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { TranslationResponse, ScriptureAnalyzeResponse, TransliterateResponse } from "../src/types.ts";
 import { SPECIALIZED_SCRIPTURE_DICT } from "./dictionaries.ts";
-import { devanagariToSlp1, devanagariToIast, iastToPhonetic } from "../src/utils/transliteration.ts";
+import { devanagariToSlp1, devanagariToIast, iastToPhonetic, iastToItrans } from "../src/utils/transliteration.ts";
 import COMMON_VADIC_DICT_RAW from "../src/data/common_dictionary.json";
 import POPULAR_ARCHIVE_RAW from "../src/data/popular_archive.json";
 
@@ -128,14 +128,38 @@ function parseGenericWordBreakdown(word: string) {
 const POPULAR_ARCHIVE: Record<string, ScriptureAnalyzeResponse & { poeticMeter: string }> = POPULAR_ARCHIVE_RAW as Record<string, ScriptureAnalyzeResponse & { poeticMeter: string }>;
 
 function tryMatchingScriptureArchive(text: string): (ScriptureAnalyzeResponse & { poeticMeter: string }) | null {
-  const normInput = text.replace(/[\s\s\r\n\t।॥.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").toLowerCase();
-  
-  if (normInput.includes("कर्म") || normInput.includes("karma")) return POPULAR_ARCHIVE['karma'];
-  if (normInput.includes("यदा") || normInput.includes("yada")) return POPULAR_ARCHIVE['yada'];
-  if (normInput.includes("त्र्यम्ब") || normInput.includes("tryamb") || normInput.includes("mrityun")) return POPULAR_ARCHIVE['tryambakam'];
-  if (normInput.includes("गायत्री") || normInput.includes("gaya") || normInput.includes("bhurbhu")) return POPULAR_ARCHIVE['om bhur'];
-  if (normInput.includes("सहनाव") || normInput.includes("shanti") || normInput.includes("sahana")) return POPULAR_ARCHIVE['saha na'];
-  if (normInput.includes("ईश") || normInput.includes("ishav") || normInput.includes("tyaktena")) return POPULAR_ARCHIVE['isha vasyam'];
+  const normInput = text.replace(/[\s\s\r\n\t।॥.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").trim().toLowerCase();
+  if (normInput.length < 5) return null; // Too short to be a full scripture verse, protect simple lexicon/word entries from false positives
+
+  if ((normInput.includes("कर्मण्ये") || normInput.includes("karmanyeva") || 
+       (normInput.includes("कर्म") && normInput.includes("फलेषु"))) || 
+      (normInput.includes("karma") && normInput.includes("phaleshu"))) {
+    return POPULAR_ARCHIVE['karma'];
+  }
+  if ((normInput.includes("यदा") && normInput.includes("धर्मस्य")) || 
+      (normInput.includes("yada") && normInput.includes("dharmasya")) ||
+      normInput.includes("सृजाम्यहम्") || normInput.includes("srijamyaham")) {
+    return POPULAR_ARCHIVE['yada'];
+  }
+  if (normInput.includes("त्र्यम्बक") || normInput.includes("tryambaka") || 
+      normInput.includes("सुगन्धि") || normInput.includes("sugandhi") ||
+      normInput.includes("मृत्योर्मुक्षीय") || normInput.includes("mrityormukshiya")) {
+    return POPULAR_ARCHIVE['tryambakam'];
+  }
+  if (normInput.includes("भूर्भुव") || normInput.includes("bhurbhuva") || 
+      normInput.includes("सवितु") || normInput.includes("savitur") ||
+      normInput.includes("प्रचोदयात्") || normInput.includes("prachodayat")) {
+    return POPULAR_ARCHIVE['om bhur'];
+  }
+  if (normInput.includes("सहनाववतु") || (normInput.includes("sahana") && normInput.includes("navavatu")) || 
+      normInput.includes("विद्विषावहै") || normInput.includes("vidvishavahai")) {
+    return POPULAR_ARCHIVE['saha na'];
+  }
+  if (normInput.includes("ईशावास्य") || normInput.includes("ishavasya") || 
+      normInput.includes("त्यक्तेन") || normInput.includes("tyaktena") ||
+      normInput.includes("धनम्") && normInput.includes("कस्य") || normInput.includes("kasya") && normInput.includes("dhanam")) {
+    return POPULAR_ARCHIVE['isha vasyam'];
+  }
 
   return null;
 }
@@ -335,7 +359,7 @@ Provide the output strictly in JSON.`;
         } else if (targetScript === 'english_phonetic') {
           out = iastToPhonetic(iast);
         } else if (targetScript === 'itrans') {
-          out = iast.toLowerCase().replace(/ā/g, 'aa').replace(/ī/g, 'ii').replace(/ū/g, 'uu').replace(/ṛ/g, 'RRi').replace(/ñ/g, '~n').replace(/ṅ/g, 'N').replace(/ś/g, 'sh_').replace(/ṣ/g, 'Sh').replace(/ṭ/g, 'T').replace(/ḍ/g, 'D').replace(/ṇ/g, 'N').replace(/ḥ/g, 'H').replace(/ṁ/g, 'M');
+          out = iastToItrans(iast);
         }
       }
     } else {
@@ -375,7 +399,22 @@ Extract or compute:
 8. Poetic Meter name if applicable (e.g., Anustubh, Gayatri, Tristubh, Jagati etc.)`;
 
     const systemInstruction = `You are a high-level Sanatana Dharma and Sanskrit scripture scholar.
-Analyze the provided Sanskrit/Hindi/English scripture. Even if they submit only a fragment, try your best to recognize and reconstruct the complete verse.
+Analyze the provided Sanskrit/Hindi/English scripture.
+
+CRITICAL WORD VS VERSE CONSTRAINTS:
+- If the input text is a single word, a small compound, or a short theological/philosophical term (typically 1 to 3 words, e.g., 'योगः', 'ज्ञानम्', 'कर्म', 'आत्मनः') rather than an actual complete scripture verse or a clear multi-word verse fragment:
+  1. Do NOT try to reconstruct a completely different verse or return translations/commentary of an unrelated longer scripture (for example, do NOT reconstruct and return BG 2.48 'samatvaṁ yoga ucyate...' if the user only entered the single term 'योगः').
+  2. Keep the "verse" field equal to the input word itself (or its clean Devanagari form if transliterated).
+  3. Treat the input as a single theological/intellectual concept or keyword. Refer to its context/source if provided (e.g. 'Gita' or 'Vedas'), identifying it as a 'Scriptural Concept' or 'Key Term' in the "identifiedSource" field.
+  4. Translate the specific concept/word directly and precisely into English and Hindi ("translationEnglish" and "translationHindi" fields).
+  5. In the "spiritualSignificance" field, provide a rich, deep theological explanation of this specific concept, quoting or citing how it is used across the scripture(s), rather than pretending the word itself is a full verse.
+  6. In the "wordBreakdown" array, include exactly the breakdown of this single word (its root, conjugation/declension, prefix/suffix, meaning).
+  7. Set the "poeticMeter" to "None / N/A".
+
+- However, if the input is a genuine verse fragment or sloka lines (e.g., 'कर्मण्येवाधिकारस्ते...'):
+  1. Reconstruct and analyze the complete verse as expected.
+  2. Provide proper translations, spiritual significance, and full word-by-word breakdown for the whole verse.
+  
 Always provide the response conforming strictly to the requested JSON structure.`;
 
     const response = await ai.models.generateContent({

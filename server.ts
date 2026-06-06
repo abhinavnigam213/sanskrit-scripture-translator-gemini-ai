@@ -28,7 +28,63 @@ async function startServer() {
   });
 
   // API Endpoint: Get specialized scripture dictionary entries grouped by sacred category
+  // Optional query parameter: ?word=...
   app.get("/api/dictionary", (req, res) => {
+    const wordParam = req.query.word;
+
+    if (wordParam && typeof wordParam === "string") {
+      const cleanWord = wordParam.trim().toLowerCase();
+
+      if (cleanWord === "all" || cleanWord === "al") {
+        return res.json({
+          Vedas: VEDAS_DICT,
+          Upanishads: UPANISHADS_DICT,
+          Gita: GITA_DICT,
+          Ramayana: RAMAYANA_DICT,
+          Puranas: PURANAS_DICT,
+          all: SPECIALIZED_SCRIPTURE_DICT
+        });
+      }
+
+      // Exact case-insensitive match on the keys
+      const exactMatch = Object.entries(SPECIALIZED_SCRIPTURE_DICT).find(
+        ([key]) => key.toLowerCase() === cleanWord
+      );
+
+      if (exactMatch) {
+        return res.json({
+          word: exactMatch[0],
+          found: true,
+          entry: exactMatch[1]
+        });
+      }
+
+      // Partial case-insensitive matches (by key, english value, or hindi value)
+      const partialMatches = Object.entries(SPECIALIZED_SCRIPTURE_DICT).filter(
+        ([key, val]) => (
+          key.toLowerCase().includes(cleanWord) ||
+          val.eng.toLowerCase().includes(cleanWord) ||
+          val.hin.toLowerCase().includes(cleanWord)
+        )
+      );
+
+      if (partialMatches.length > 0) {
+        return res.json({
+          word: wordParam,
+          found: true,
+          message: `Specific term not found, but found ${partialMatches.length} matching entry/entries.`,
+          matches: Object.fromEntries(partialMatches)
+        });
+      }
+
+      return res.status(404).json({
+        word: wordParam,
+        found: false,
+        message: `Word "${wordParam}" not found in our specialized scriptures dictionary. Try querying "all" to retrieve all entries.`,
+        availableCategories: ["Vedas", "Upanishads", "Gita", "Ramayana", "Puranas"]
+      });
+    }
+
     res.json({
       Vedas: VEDAS_DICT,
       Upanishads: UPANISHADS_DICT,

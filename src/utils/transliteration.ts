@@ -153,3 +153,25 @@ export function iastToPhonetic(iast: string): string {
 export function webDevanagariToSlp1(text: string): string {
   return devanagariToSlp1(text);
 }
+
+/**
+ * Basic offline converter mapping IAST diacritics to keyboard-friendly ITRANS markup.
+ */
+export function iastToItrans(iast: string): string {
+  return iast
+    .toLowerCase()
+    .replace(/ā/g, 'aa')
+    .replace(/ī/g, 'ii')
+    .replace(/ū/g, 'uu')
+    .replace(/ṛ/g, 'RRi')
+    .replace(/ñ/g, '~n')
+    .replace(/ṅ/g, 'N')
+    .replace(/ś/g, 'sh_')
+    .replace(/ṣ/g, 'Sh')
+    .replace(/ṭ/g, 'T')
+    .replace(/ḍ/g, 'D')
+    .replace(/ṇ/g, 'N')
+    .replace(/ḥ/g, 'H')
+    .replace(/ṁ/g, 'M');
+}
+
