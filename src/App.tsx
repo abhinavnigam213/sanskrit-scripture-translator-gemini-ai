@@ -11,7 +11,7 @@ import {
 
 import { POPULAR_SCRIPTURES } from './data/scriptures.ts';
 import { Scripture, ScriptureAnalyzeResponse, TransliterateResponse } from './types.ts';
-import { webDevanagariToSlp1 } from './utils/transliteration.ts';
+import { devanagariToSlp1 } from './utils/transliteration.ts';
 
 // Child components
 import Header from './components/Header.tsx';
@@ -92,7 +92,7 @@ export default function App() {
       iast: sc.transliterationDefault,
       itrans: "Loading scriptural variations...",
       phonetic: "Loading chant phonetics...",
-      slp1: webDevanagariToSlp1(sc.verse)
+      slp1: devanagariToSlp1(sc.verse)
     });
 
     setAnalysisResult({
@@ -135,7 +135,7 @@ export default function App() {
         iast: data.transliterationIAST,
         itrans: inputText.length < 50 ? `${inputText} (translating...)` : "Generating scriptural representation...",
         phonetic: data.transliterationPhonetic,
-        slp1: webDevanagariToSlp1(data.verse || inputText)
+        slp1: devanagariToSlp1(data.verse || inputText)
       });
 
       // Also trigger a pure transliteration run for ITRANS specifically
@@ -214,7 +214,7 @@ export default function App() {
     setApiError(null);
     try {
       if (target === 'slp1') {
-        const localSlp = webDevanagariToSlp1(text);
+        const localSlp = devanagariToSlp1(text);
         setTransliterations(prev => ({
           ...prev,
           slp1: localSlp
