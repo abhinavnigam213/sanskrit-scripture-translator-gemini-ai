@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { translateText, transliterateText, analyzeScripture } from "./server/translator.ts";
 import { POPULAR_SCRIPTURES } from "./src/data/scriptures.ts";
@@ -16,11 +17,101 @@ async function startServer() {
   // JSON parsing middleware
   app.use(express.json());
 
+  // Intercept the corrupted logo file and serve it with the correct SVG content-type
+  app.get("/sq_logo_en_borderless.png", (req, res) => {
+    try {
+      const imgPath = path.join(process.cwd(), "public/sq_logo_en_borderless.png");
+      const data = fs.readFileSync(imgPath);
+      res.setHeader("Content-Type", "image/svg+xml");
+      res.send(data);
+    } catch (err) {
+      res.status(404).send("Logo not found");
+    }
+  });
+
+  // Serve static assets from the public folder directly
+  app.use(express.static(path.join(process.cwd(), "public")));
+
   // Ground-level middleware to print request summary
   app.use((req, res, next) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
     next();
   });
+
+  // Check runtime switch
+  let useDotnetActive = false;
+
+  if (process.env.USE_DOTNET === "true" || process.env.USE_DOTNET === "1") {
+    console.log("-------------------------------------------------------");
+    console.log("[Node] USE_DOTNET is enabled! Trying to spawn C# SanskritQuestApi on port 5000...");
+    console.log("-------------------------------------------------------");
+
+    try {
+      const { spawn } = await import("child_process");
+      const dotnetProcess = spawn("dotnet", ["run", "--project", "SanskritQuestApi/SanskritQuestApi.csproj"], {
+        stdio: "inherit",
+        env: process.env
+      });
+
+      useDotnetActive = true;
+
+      dotnetProcess.on("error", (err: any) => {
+        console.log("[Node Warning] .NET SDK is not installed in this sandbox environment:", err.message);
+        useDotnetActive = false;
+        console.log("[Node Fallback] Quietly carrying on with local Express-native API registry.");
+      });
+
+      dotnetProcess.on("exit", (code) => {
+        console.log(`[Node] Dotnet process exited with code ${code}`);
+        useDotnetActive = false;
+      });
+    } catch (err: any) {
+      console.error("[Node] Error spawning dotnet process block:", err.message);
+      useDotnetActive = false;
+    }
+  }
+
+  // Set up the custom reverse proxy to direct /api and /swagger requests to .NET Core
+  const http = await import("http");
+  app.all(["/api/*", "/swagger*", "/swagger"], (req, res, next) => {
+    if (!useDotnetActive) {
+      // Local fallback
+      return next();
+    }
+
+    const options = {
+      hostname: "127.0.0.1",
+      port: 5000,
+      path: req.originalUrl || req.url,
+      method: req.method,
+      headers: {
+        ...req.headers,
+        host: "127.0.0.1:5000"
+      }
+    };
+
+    const proxyReq = http.request(options, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+      proxyRes.pipe(res, { end: true });
+    });
+
+    req.pipe(proxyReq, { end: true });
+
+    proxyReq.on("error", (err: any) => {
+      console.error("[Node Proxy Error] Cannot reach SanskritQuestApi Web API on port 5000:", err.message);
+      if (req.path.startsWith("/api/")) {
+        console.log("[Node Proxy Fallback] Forwarding request to local Express handlers...");
+        next(); // Call local fallback handlers
+      } else {
+        res.status(502).json({
+          error: "SanskritQuestApi Web API is booting or currently offline.",
+          details: err.message
+        });
+      }
+    });
+  });
+
+  // --- Express-native API Route Handlers (Backup / Standard Fallback Mode) ---
 
   // API Endpoint: Get popular scriptures
   app.get("/api/scriptures", (req, res) => {
