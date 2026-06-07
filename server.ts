@@ -31,12 +31,12 @@ async function startServer() {
 
   if (process.env.USE_DOTNET === "true" || process.env.USE_DOTNET === "1") {
     console.log("-------------------------------------------------------");
-    console.log("[Node] USE_DOTNET is enabled! Trying to spawn C# SanskritQuestApi on port 5000...");
+    console.log("[Node] USE_DOTNET is enabled! Trying to spawn C# Web.Api on port 5000...");
     console.log("-------------------------------------------------------");
 
     try {
       const { spawn } = await import("child_process");
-      const dotnetProcess = spawn("dotnet", ["run", "--project", "SanskritQuestApi/SanskritQuestApi.csproj"], {
+      const dotnetProcess = spawn("dotnet", ["run", "--project", "Web.Api/Web.Api.csproj"], {
         stdio: "inherit",
         env: process.env
       });
@@ -86,13 +86,13 @@ async function startServer() {
     req.pipe(proxyReq, { end: true });
 
     proxyReq.on("error", (err: any) => {
-      console.error("[Node Proxy Error] Cannot reach SanskritQuestApi Web API on port 5000:", err.message);
+      console.error("[Node Proxy Error] Cannot reach Web.Api Web API on port 5000:", err.message);
       if (req.path.startsWith("/api/")) {
         console.log("[Node Proxy Fallback] Forwarding request to local Express handlers...");
         next(); // Call local fallback handlers
       } else {
         res.status(502).json({
-          error: "SanskritQuestApi Web API is booting or currently offline.",
+          error: "Web.Api Web API is booting or currently offline.",
           details: err.message
         });
       }

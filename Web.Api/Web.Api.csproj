@@ -4,6 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>$(SolutionName).$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <AssemblyName>SanskritQuest.Main.Web.Api</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
