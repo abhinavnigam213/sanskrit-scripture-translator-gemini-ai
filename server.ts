@@ -17,18 +17,6 @@ async function startServer() {
   // JSON parsing middleware
   app.use(express.json());
 
-  // Intercept the corrupted logo file and serve it with the correct SVG content-type
-  app.get("/sq_logo_en_borderless.png", (req, res) => {
-    try {
-      const imgPath = path.join(process.cwd(), "public/sq_logo_en_borderless.png");
-      const data = fs.readFileSync(imgPath);
-      res.setHeader("Content-Type", "image/svg+xml");
-      res.send(data);
-    } catch (err) {
-      res.status(404).send("Logo not found");
-    }
-  });
-
   // Serve static assets from the public folder directly
   app.use(express.static(path.join(process.cwd(), "public")));
 
