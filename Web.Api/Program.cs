@@ -14,7 +14,7 @@ using Microsoft.OpenApi.Models;
 using Microsoft.Extensions.AI;
 using OpenAI;
 using System.ClientModel;
-using SanskritQuestApi.Services;
+using SanskritQuest.Main.Web.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,16 +37,16 @@ if (!string.IsNullOrEmpty(apiKey))
         var openAIClient = new OpenAIClient(new ApiKeyCredential(apiKey), clientOptions);
         IChatClient chatClient = openAIClient.AsChatClient("gemini-1.5-flash");
         builder.Services.AddSingleton<IChatClient>(chatClient);
-        Console.WriteLine("[SanskritQuestApi] Registered Gemini ChatClient successfully.");
+        Console.WriteLine("[Web.Api] Registered Gemini ChatClient successfully.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[SanskritQuestApi] Warning: Failed to build AI ChatClient: {ex.Message}");
+        Console.WriteLine($"[Web.Api] Warning: Failed to build AI ChatClient: {ex.Message}");
     }
 }
 else
 {
-    Console.WriteLine("[SanskritQuestApi] Warning: GEMINI_API_KEY is not defined. Server starting in OFFLINE fallback mode.");
+    Console.WriteLine("[Web.Api] Warning: GEMINI_API_KEY is not defined. Server starting in OFFLINE fallback mode.");
 }
 
 // Register internal state/computation services
@@ -55,7 +55,7 @@ builder.Services.AddSingleton<AIService>();
 
 // 2. Configure JWT Authentication Services
 var jwtKey = builder.Configuration["AuthSettings:JwtKey"] ?? "SanskritQuest3.5SuperSecureJWTTokenKeyDoubleStrength999!!!";
-var issuer = builder.Configuration["AuthSettings:JwtIssuer"] ?? "SanskritQuestApi";
+var issuer = builder.Configuration["AuthSettings:JwtIssuer"] ?? "SanskritQuest.Main.Web.Api";
 var audience = builder.Configuration["AuthSettings:JwtAudience"] ?? "SanskritQuestApp";
 
 builder.Services.AddAuthentication(options =>

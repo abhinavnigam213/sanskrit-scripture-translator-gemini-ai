@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace SanskritQuestApi.Models;
+namespace SanskritQuest.Main.Web.Api.Models;
 
 public record Scripture(
     [property: JsonPropertyName("id")] string Id,

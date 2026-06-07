@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace SanskritQuestApi.Utils;
+namespace SanskritQuest.Main.Web.Api.Utils;
 
 public static class Transliterator
 {

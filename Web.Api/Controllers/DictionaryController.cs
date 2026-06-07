@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SanskritQuestApi.Services;
+using SanskritQuest.Main.Web.Api.Services;
 
-namespace SanskritQuestApi.Controllers;
+namespace SanskritQuest.Main.Web.Api.Controllers;
 
 [Authorize]
 [ApiController]

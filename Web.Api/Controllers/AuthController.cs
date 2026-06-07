@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
-namespace SanskritQuestApi.Controllers;
+namespace SanskritQuest.Main.Web.Api.Controllers;
 
 public record TokenRequest(
     [JsonPropertyName("clientId")] string ClientId,
@@ -48,7 +48,7 @@ public class AuthController : ControllerBase
         }
 
         var jwtKey = _configuration["AuthSettings:JwtKey"] ?? "MySuperLongSecureDummySecurityKeyThatMustBeGreater32Bytes!";
-        var issuer = _configuration["AuthSettings:JwtIssuer"] ?? "SanskritQuestApi";
+        var issuer = _configuration["AuthSettings:JwtIssuer"] ?? "SanskritQuest.Main.Web.Api";
         var audience = _configuration["AuthSettings:JwtAudience"] ?? "SanskritQuestApp";
         var expiryMinutesDefault = 120;
         

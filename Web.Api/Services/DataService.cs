@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using SanskritQuestApi.Models;
+using SanskritQuest.Main.Web.Api.Models;
 
-namespace SanskritQuestApi.Services;
+namespace SanskritQuest.Main.Web.Api.Services;
 
 public class DataService
 {

@@ -5,10 +5,10 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.AI;
-using SanskritQuestApi.Models;
-using SanskritQuestApi.Utils;
+using SanskritQuest.Main.Web.Api.Models;
+using SanskritQuest.Main.Web.Api.Utils;
 
-namespace SanskritQuestApi.Services;
+namespace SanskritQuest.Main.Web.Api.Services;
 
 public class AIService
 {
